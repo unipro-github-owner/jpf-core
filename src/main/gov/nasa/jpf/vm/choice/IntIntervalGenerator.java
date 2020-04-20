@@ -223,4 +223,38 @@ public class IntIntervalGenerator extends ChoiceGeneratorBase<Integer> implement
   public ChoiceGenerator<Integer> randomize() {
     return new RandomOrderIntCG(this);
   }
+
+  static class IntIntervalCgStorage extends BaseCgStorage<Integer> {
+    private static final long serialVersionUID = 1L;
+    protected int min, max;
+    protected int next;
+    protected int delta;
+
+    @Override
+    public IntIntervalGenerator restore() {
+      IntIntervalGenerator cg = (IntIntervalGenerator)super.restore();
+      cg.next = next;
+      return cg;
+    }
+
+    @Override
+    public IntIntervalGenerator getObject() {
+      return new IntIntervalGenerator(getId(), min, max, delta);
+    }
+  }
+
+  @Override
+  public IntIntervalCgStorage store() {
+    IntIntervalCgStorage storage = (IntIntervalCgStorage)super.store();
+    storage.min = min;
+    storage.max = max;
+    storage.next = next;
+    storage.delta = delta;
+    return storage;
+  }
+
+  @Override
+  protected IntIntervalCgStorage createStorage() {
+    return new IntIntervalCgStorage();
+  }
 }

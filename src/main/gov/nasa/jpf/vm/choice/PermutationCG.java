@@ -75,4 +75,35 @@ public class PermutationCG extends ChoiceGeneratorBase<int[]>{
   public int getProcessedNumberOfChoices() {
     return (int) pg.getNumberOfGeneratedPermutations();
   }
+
+  static class PermutationCgStorage extends BaseCgStorage<int[]> {
+    private static final long serialVersionUID = 1L;
+    PermutationGenerator pg; //FIXME TODO
+    int[] permutation;
+
+    @Override
+    public PermutationCG restore() {
+      PermutationCG cg = (PermutationCG)super.restore();
+      cg.permutation = permutation;
+      return cg;
+    }
+
+    @Override
+    public PermutationCG getObject() {
+      return new PermutationCG(getId(), pg);
+    }
+  }
+
+  @Override
+  public PermutationCgStorage store() {
+    PermutationCgStorage storage = (PermutationCgStorage)super.store();
+    storage.pg = pg;
+    storage.permutation = permutation;
+    return storage;
+  }
+
+  @Override
+  protected PermutationCgStorage createStorage() {
+    return new PermutationCgStorage();
+  }
 }

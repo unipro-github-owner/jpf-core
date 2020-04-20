@@ -37,8 +37,8 @@ public class ApplicationContext implements SystemAttribute {
   MethodInfo miEntry;
   
   FinalizerThreadInfo finalizerThread;
-  IntTable<String> internStrings;
-  
+  IntTable<String, String> internStrings;
+
   ApplicationContext (int id, String mainClassName, String mainEntry, String[] args, String host, SystemClassLoaderInfo sysCl){
     this.id = id;
     this.mainClassName = mainClassName;
@@ -46,7 +46,7 @@ public class ApplicationContext implements SystemAttribute {
     this.args = args;
     this.host = host;
     this.sysCl = sysCl;
-    this.internStrings = new IntTable<String>(8);
+    this.internStrings = new IntTable<String, String>(8);
   }
   
   void setEntryMethod (MethodInfo miEntry){
@@ -84,8 +84,8 @@ public class ApplicationContext implements SystemAttribute {
   public void setFinalizerThread(ThreadInfo ti) {
     finalizerThread = (FinalizerThreadInfo)ti;
   }
-  
-  public IntTable<String> getInternStrings() {
+
+  public IntTable<String, String> getInternStrings() {
     return internStrings;
   }
   

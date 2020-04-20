@@ -157,4 +157,42 @@ public class RandomIntIntervalGenerator extends ChoiceGeneratorBase<Integer> imp
     return this;
   }
 
+  static class RandomIntIntervalCgStorage extends BaseCgStorage<Integer> {
+    private static final long serialVersionUID = 1L;
+    int min, max;
+    int nChoices;
+    long seed;
+    int next;
+    int count;
+
+    @Override
+    public RandomIntIntervalGenerator restore() {
+      RandomIntIntervalGenerator cg = (RandomIntIntervalGenerator)super.restore();
+      cg.next = next;
+      cg.count = count;
+      return cg;
+    }
+
+    @Override
+    public RandomIntIntervalGenerator getObject() {
+      return new RandomIntIntervalGenerator(getId(), min, max, nChoices, seed);
+    }
+  }
+
+  @Override
+  public RandomIntIntervalCgStorage store() {
+    RandomIntIntervalCgStorage storage = (RandomIntIntervalCgStorage)super.store();
+    storage.min = min;
+    storage.max = max;
+    storage.nChoices = nChoices;
+    storage.seed = seed;
+    storage.next = next;
+    storage.count = count;
+    return storage;
+  }
+
+  @Override
+  protected RandomIntIntervalCgStorage createStorage() {
+    return new RandomIntIntervalCgStorage();
+  }
 }

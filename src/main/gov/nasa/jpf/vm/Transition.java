@@ -17,7 +17,10 @@
  */
 package gov.nasa.jpf.vm;
 
+import java.io.Serializable;
 import java.util.Iterator;
+
+import gov.nasa.jpf.vm.ChoiceGenerator.CgStorage;
 
 /**
  * concrete type to store execution paths. TrailInfo corresponds to Transition,
@@ -175,4 +178,39 @@ public class Transition implements Iterable<Step>, Cloneable {
   public Iterator<Step> iterator () {
     return new StepIterator();
   }
+
+  static class TransitionStorage implements Serializable {
+    private static final long serialVersionUID = 1L;
+    CgStorage<?> cg;
+    int ti;
+    private Step   first, last; //FIXME TODO investigate
+    int nSteps;
+    Object annotation; //FIXME TODO investigate
+    String         output;
+    int stateId;
+
+    public Transition restore() {
+      Transition t = new Transition(cg.restore(), VM.getVM().getThreadList().getThreadInfoForId(ti));
+      t.first = first;
+      t.last = last;
+      t.nSteps = nSteps;
+      t.annotation = annotation;
+      t.output = output;
+      t.stateId = stateId;
+      return t;
+    }
+  }
+
+  public TransitionStorage store() {
+    TransitionStorage s = new TransitionStorage();
+    s.cg = cg.store();
+    s.ti = ti.getId();
+    s.first = first;
+    s.last = last;
+    s.nSteps = nSteps;
+    s.annotation = annotation;
+    s.output = output;
+    s.stateId = stateId;
+    return s;
+  };
 }

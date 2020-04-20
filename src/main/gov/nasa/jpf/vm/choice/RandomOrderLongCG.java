@@ -29,8 +29,12 @@ public class RandomOrderLongCG extends ChoiceGeneratorBase<Long> implements Long
 
   protected int nextIdx;
 
+  private RandomOrderLongCG(String id) {
+    super(id);
+  }
+
   public RandomOrderLongCG (LongChoiceGenerator sub) {
-    super(sub.getId());
+    this(sub.getId());
     setPreviousChoiceGenerator(sub.getPreviousChoiceGenerator());
     choices = new long[sub.getTotalNumberOfChoices()];
     for (int i = 0; i < choices.length; i++) {
@@ -91,5 +95,37 @@ public class RandomOrderLongCG extends ChoiceGeneratorBase<Long> implements Long
   @Override
   public Class<Long> getChoiceType() {
     return Long.class;
+  }
+
+  static class RandomOrderLongCgStorage extends BaseCgStorage<Long> {
+    private static final long serialVersionUID = 1L;
+    long[] choices;
+    int nextIdx;
+
+    @Override
+    public RandomOrderLongCG restore() {
+      RandomOrderLongCG cg = (RandomOrderLongCG)super.restore();
+      cg.choices = choices;
+      cg.nextIdx = nextIdx;
+      return cg;
+    }
+
+    @Override
+    public RandomOrderLongCG getObject() {
+      return new RandomOrderLongCG(getId());
+    }
+  }
+
+  @Override
+  public RandomOrderLongCgStorage store() {
+    RandomOrderLongCgStorage storage = (RandomOrderLongCgStorage)super.store();
+    storage.choices = choices;
+    storage.nextIdx = nextIdx;
+    return storage;
+  }
+
+  @Override
+  protected RandomOrderLongCgStorage createStorage() {
+    return new RandomOrderLongCgStorage();
   }
 }

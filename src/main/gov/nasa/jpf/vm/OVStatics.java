@@ -55,16 +55,16 @@ public class OVStatics implements Statics {
   // NOTE this is per instance so that each one is as dense as possible, but since
   // it is search global it does NOT have to be restored and we can copy the reference when cloning
   protected int nextId;
-  protected IntTable<String> ids;
-  
-  
+  protected IntTable<String, String> ids;
+
+
   //--- construction
   
   public OVStatics (Config conf) {
-    elementInfos = new ObjVector<ElementInfo>();
-    
+    elementInfos = new ObjVector<>();
+
     nextId = 0;
-    ids = new IntTable<String>();
+    ids = new IntTable<>();
   }
   
   protected int computeId (ClassInfo ci) {

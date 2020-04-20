@@ -29,7 +29,7 @@ import java.util.ArrayList;
  * 2006-06-14 - major rewrite by pcd
  */
 public final class HashPool<V> {
-  private IntTable<V> pool;
+  private IntTable<V, V> pool;
   private ArrayList<V> vect;
   
   public HashPool() {
@@ -37,7 +37,7 @@ public final class HashPool<V> {
   }
   
   public HashPool(int pow) {
-    pool = new IntTable<V>(pow);
+    pool = new IntTable<V, V>(pow);
     vect = new ArrayList<V>(1 << pow);
   }
 

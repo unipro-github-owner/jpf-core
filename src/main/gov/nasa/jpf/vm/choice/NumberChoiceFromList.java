@@ -235,4 +235,25 @@ public abstract class NumberChoiceFromList<T extends Number> extends ChoiceGener
     return this;
   }
 
+  static abstract class NumberListCgStorage<T extends Number> extends BaseCgStorage<T> {
+    private static final long serialVersionUID = 1L;
+    T[] values;
+    int count = -1;
+
+    @Override
+    public NumberChoiceFromList<T> restore() {
+      NumberChoiceFromList<T> cg = (NumberChoiceFromList<T>)super.restore();
+      cg.values = values;
+      cg.count = count;
+      return cg;
+    }
+  }
+
+  @Override
+  public NumberListCgStorage<T> store() {
+    NumberListCgStorage<T> storage = (NumberListCgStorage<T>)super.store();
+    storage.values = values;
+    storage.count = count;
+    return storage;
+  }
 }

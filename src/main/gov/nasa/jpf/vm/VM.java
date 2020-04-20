@@ -17,19 +17,6 @@
  */
 package gov.nasa.jpf.vm;
 
-import gov.nasa.jpf.Config;
-import gov.nasa.jpf.JPF;
-import gov.nasa.jpf.JPFConfigException;
-import gov.nasa.jpf.JPFException;
-import gov.nasa.jpf.JPFListenerException;
-import gov.nasa.jpf.jvm.ClassFile;
-import gov.nasa.jpf.vm.FinalizerThreadInfo;
-import gov.nasa.jpf.search.Search;
-import gov.nasa.jpf.util.IntTable;
-import gov.nasa.jpf.util.JPFLogger;
-import gov.nasa.jpf.util.Misc;
-import gov.nasa.jpf.util.Predicate;
-
 import java.io.PrintWriter;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
@@ -37,6 +24,18 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+
+import gov.nasa.jpf.Config;
+import gov.nasa.jpf.JPF;
+import gov.nasa.jpf.JPFConfigException;
+import gov.nasa.jpf.JPFException;
+import gov.nasa.jpf.JPFListenerException;
+import gov.nasa.jpf.jvm.ClassFile;
+import gov.nasa.jpf.search.Search;
+import gov.nasa.jpf.util.IntTable;
+import gov.nasa.jpf.util.JPFLogger;
+import gov.nasa.jpf.util.Misc;
+import gov.nasa.jpf.util.Predicate;
 
 
 /**
@@ -1771,11 +1770,11 @@ public abstract class VM {
 
 
   public void restoreState (RestorableVMState state) {
-    if (state.path == null) {
+    if (state.hasNoPath()) {
       throw new JPFException("tried to restore partial VMState: " + state);
     }
     backtracker.restoreState(state.getBkState());
-    path = state.path.clone();
+    path = state.getPath();
   }
 
   public void activateGC () {
@@ -2006,8 +2005,8 @@ public abstract class VM {
   
   // this is invoked by the heap (see GenericHeap.newInternString()) upon creating
   // the very first intern string
-  public abstract Map<Integer,IntTable<String>> getInitialInternStringsMap();
-  
+  public abstract Map<Integer,IntTable<String, String>> getInitialInternStringsMap();
+
   // ---------- Predicates used to query threads from ThreadList ---------- //
   
   public abstract Predicate<ThreadInfo> getRunnablePredicate();

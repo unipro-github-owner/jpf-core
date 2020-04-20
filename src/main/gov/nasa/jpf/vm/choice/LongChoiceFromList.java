@@ -19,6 +19,7 @@ package gov.nasa.jpf.vm.choice;
 
 import gov.nasa.jpf.Config;
 import gov.nasa.jpf.JPFException;
+import gov.nasa.jpf.vm.ChoiceGenerator;
 import gov.nasa.jpf.vm.LongChoiceGenerator;
 
 public class LongChoiceFromList extends NumberChoiceFromList<Long> implements LongChoiceGenerator {
@@ -80,5 +81,17 @@ public class LongChoiceFromList extends NumberChoiceFromList<Long> implements Lo
     }
 
     count = -1;
+  }
+
+  @Override
+  protected BaseCgStorage<Long> createStorage() {
+    return new NumberListCgStorage<Long>() {
+      private static final long serialVersionUID = 1L;
+
+      @Override
+      public ChoiceGenerator<Long> getObject() {
+        return new LongChoiceFromList(id);
+      }
+    };
   }
 }

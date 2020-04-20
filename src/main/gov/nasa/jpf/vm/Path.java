@@ -17,11 +17,14 @@
  */
 package gov.nasa.jpf.vm;
 
-import gov.nasa.jpf.util.Printable;
-
 import java.io.PrintWriter;
+import java.io.Serializable;
 import java.util.Iterator;
 import java.util.LinkedList;
+
+import gov.nasa.jpf.util.Printable;
+import gov.nasa.jpf.vm.ChoiceGeneratorBase.BaseCgStorage;
+import gov.nasa.jpf.vm.Transition.TransitionStorage;
 
 
 /**
@@ -130,5 +133,38 @@ public class Path implements Printable, Iterable<Transition>, Cloneable {
   
   public Iterator<Transition> descendingIterator() {
     return stack.descendingIterator();
+  }
+
+  static class PathStorage implements Serializable {
+    private static final long serialVersionUID = 1L;
+    String             application;
+    TransitionStorage[] stack;
+
+    public Path restore() {
+      Path p = new Path(application);
+      Transition prev = null;
+      for (int i = 0; i < stack.length; ++i) {
+        Transition t = stack[i].restore();
+        if (prev != null) {
+          t.cg.setPreviousChoiceGenerator(prev.cg);
+        }
+        p.stack.add(t);
+        prev = t;
+      }
+      return p;
+    }
+  }
+
+  public PathStorage store() {
+    PathStorage storage = new PathStorage();
+    storage.application = application;
+    storage.stack = new TransitionStorage[stack.size()];
+    int i = 0;
+    for (Iterator<Transition> iter = stack.iterator(); iter.hasNext();) {
+      TransitionStorage t = iter.next().store();
+      ((BaseCgStorage)t.cg).prev = null;
+      storage.stack[i++] = t;
+    }
+    return storage;
   }
 }

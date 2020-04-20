@@ -35,26 +35,37 @@ import java.util.Iterator;
  * unused element than doing a -1 on all gets/sets
  */
 public class OVHeap extends GenericSGOIDHeap {
-  
+
+  static class OvHeapStorage extends SgoidHeapStorage {
+    private static final long serialVersionUID = 1L;
+    ObjVector.Snapshot<ElementInfo> eiSnap;
+  }
   //--- state management
   static class OVMemento extends GenericSGOIDHeapMemento {
-    ObjVector.Snapshot<ElementInfo> eiSnap;
-    
     OVMemento(OVHeap heap) {
       super(heap);
-      
-      heap.elementInfos.process(ElementInfo.storer);      
-      eiSnap = heap.elementInfos.getSnapshot();
     }
 
     @Override
-    public Heap restore(Heap inSitu) {
-      super.restore( inSitu);
-      
-      OVHeap heap = (OVHeap)inSitu;
-      heap.elementInfos.restore(eiSnap);      
+    HeapStorage createStorage() {
+      return new OvHeapStorage();
+    }
+
+    @Override
+    HeapStorage fill(GenericHeap gheap) {
+      OvHeapStorage storage = (OvHeapStorage)super.fill(gheap);
+      OVHeap heap = (OVHeap)gheap;
+      heap.elementInfos.process(ElementInfo.storer);
+      storage.eiSnap = heap.elementInfos.getSnapshot();
+      return storage;
+    }
+
+    @Override
+    public Heap restore(Heap inSitu, Object obj) {
+      OVHeap heap = (OVHeap)super.restore(inSitu, obj);
+      OvHeapStorage storage = (OvHeapStorage)obj;
+      heap.elementInfos.restore(storage.eiSnap);
       heap.elementInfos.process(ElementInfo.restorer);
-      
       return heap;
     }
   }

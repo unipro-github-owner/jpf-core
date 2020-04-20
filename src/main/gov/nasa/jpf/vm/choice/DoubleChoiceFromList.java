@@ -19,6 +19,7 @@ package gov.nasa.jpf.vm.choice;
 
 import gov.nasa.jpf.Config;
 import gov.nasa.jpf.JPFException;
+import gov.nasa.jpf.vm.ChoiceGenerator;
 import gov.nasa.jpf.vm.DoubleChoiceGenerator;
 
 /**
@@ -85,5 +86,17 @@ public class DoubleChoiceFromList extends NumberChoiceFromList<Double> implement
     }
 
     count = -1;
+  }
+
+  @Override
+  protected BaseCgStorage<Double> createStorage() {
+    return new NumberListCgStorage<Double>() {
+      private static final long serialVersionUID = 1L;
+
+      @Override
+      public ChoiceGenerator<Double> getObject() {
+        return new DoubleChoiceFromList(id);
+      }
+    };
   }
 }

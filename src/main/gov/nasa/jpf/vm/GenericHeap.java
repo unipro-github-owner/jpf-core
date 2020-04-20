@@ -18,6 +18,7 @@
 
 package gov.nasa.jpf.vm;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -40,30 +41,52 @@ import gov.nasa.jpf.util.Processor;
  * and associated getters, allocators and iterators
  */
 public abstract class GenericHeap implements Heap, Iterable<ElementInfo> {
-  
-  static abstract class GenericHeapMemento implements Memento<Heap> {
-    // those can be simply copied
+
+  static class HeapStorage implements Serializable {
+    private static final long serialVersionUID = 1L;
     int attributes;
-    IntVector pinDownList;
-    Map<Integer,IntTable<String>> internStringsMap;
-    
+    int[] pinDownList;
+    Map<Integer,IntTable<String, String>> internStringsMap;
+  }
+
+  static abstract class GenericHeapMemento implements Memento<Heap> {
+    HeapStorage data;
+
     protected GenericHeapMemento (GenericHeap heap){
-      // these are copy-on-first-write, so we don't have to clone
-      pinDownList = heap.pinDownList;
-      internStringsMap = heap.internStringsMap;
-      attributes = heap.attributes & ATTR_STORE_MASK;
-      
+      data = fill(heap);
+      // -- serialization will be added here --
       heap.setStored();
     }
-    
+
+    HeapStorage createStorage() {
+      return new HeapStorage();
+    }
+
+    Object readDObj() {
+      // -- de-serialization will be added here --
+      return data;
+    }
+
+    HeapStorage fill(GenericHeap heap) {
+      HeapStorage storage = createStorage();
+      storage.attributes = heap.attributes;
+      storage.internStringsMap = heap.internStringsMap;
+      storage.pinDownList = heap.pinDownList.toArray();
+      return storage;
+    }
+
+    public Heap restore(Heap inSitu, Object obj) {
+      GenericHeap heap = (GenericHeap)inSitu;
+      HeapStorage storage = (HeapStorage)obj;
+      heap.attributes = storage.attributes;
+      heap.internStringsMap = storage.internStringsMap;
+      heap.pinDownList = new IntVector(storage.pinDownList);
+      return heap;
+    }
+
     @Override
     public Heap restore (Heap inSitu) {
-      GenericHeap heap = (GenericHeap) inSitu;
-      heap.pinDownList = pinDownList;
-      heap.internStringsMap = internStringsMap;
-      heap.attributes = attributes;
-      heap.liveBitValue = false; // always start with false after a restore
-      return inSitu;
+      return restore(inSitu, readDObj());
     }
   }
   
@@ -84,7 +107,7 @@ public abstract class GenericHeap implements Heap, Iterable<ElementInfo> {
   // interned Strings
   // this is copy-on-first-write, it is created on demand upon adding the first interned string,
   // and it includes IntTable per process.
-  protected Map<Integer,IntTable<String>> internStringsMap;
+  protected Map<Integer,IntTable<String, String>> internStringsMap;
 
   // the usual drill - the lower 2 bytes are sticky, the upper two ones 
   // hold change status and transient (transition local) flags
@@ -425,8 +448,8 @@ public abstract class GenericHeap implements Heap, Iterable<ElementInfo> {
   protected void addToInternStrings (String str, int objref, int prcId) {
     if ((attributes & ATTR_INTERN_CHANGED) == 0){
       // shallow copy all interned strings tables
-      internStringsMap = new HashMap<Integer,IntTable<String>>(internStringsMap);
-      
+      internStringsMap = new HashMap<Integer,IntTable<String, String>>(internStringsMap);
+
       // only clone the interned strings table of the current process
       internStringsMap.put(prcId, internStringsMap.get(prcId).clone());
       

@@ -72,7 +72,7 @@ public abstract class EventGeneratorFactory extends ListenerAdapter
 
     Loop (String id, int startPos,  int endPos){
       super(id);
-      
+
       this.startPos = startPos;
       this.endPos = endPos;
     }
@@ -118,6 +118,28 @@ public abstract class EventGeneratorFactory extends ListenerAdapter
     @Override
 	public void reset() {}
 
+    static class LoopCgStorage<T> extends BaseCgStorage<T> {
+      private static final long serialVersionUID = 1L;
+      int startPos, endPos;
+
+      @Override
+      public Loop getObject() {
+        return new Loop(getId(), startPos, endPos);
+      }
+    }
+
+    @Override
+    public LoopCgStorage store() {
+      LoopCgStorage storage = (LoopCgStorage)super.store();
+      storage.startPos = startPos;
+      storage.endPos = endPos;
+      return storage;
+    }
+
+    @Override
+    protected LoopCgStorage createStorage() {
+      return new LoopCgStorage();
+    }
   }
 
   /** the last returned position in the generator stream */

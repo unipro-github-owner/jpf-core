@@ -30,8 +30,12 @@ public class DoubleThresholdGenerator extends ChoiceGeneratorBase<Double> implem
   protected double[] values = new double[3];
   protected int count;
 
-  public DoubleThresholdGenerator(Config conf, String id) {
+  private DoubleThresholdGenerator(String id) {
     super(id);
+  }
+
+  public DoubleThresholdGenerator(Config conf, String id) {
+    this(id);
 
     values[0] = conf.getDouble(id + ".low");
     values[1] = conf.getDouble(id + ".threshold");
@@ -119,5 +123,37 @@ public class DoubleThresholdGenerator extends ChoiceGeneratorBase<Double> implem
   @Override
   public Class<Double> getChoiceType() {
     return Double.class;
+  }
+
+  static class DoubleCgStorage extends BaseCgStorage<Double> {
+    private static final long serialVersionUID = 1L;
+    double[] values = new double[3];
+    int count;
+
+    @Override
+    public DoubleThresholdGenerator restore() {
+      DoubleThresholdGenerator cg = (DoubleThresholdGenerator)super.restore();
+      cg.values = values;
+      cg.count = count;
+      return cg;
+    }
+
+    @Override
+    public DoubleThresholdGenerator getObject() {
+      return new DoubleThresholdGenerator(getId());
+    }
+  }
+
+  @Override
+  public DoubleCgStorage store() {
+    DoubleCgStorage storage = (DoubleCgStorage)super.store();
+    storage.values = values;
+    storage.count = count;
+    return storage;
+  }
+
+  @Override
+  protected DoubleCgStorage createStorage() {
+    return new DoubleCgStorage();
   }
 }

@@ -17,11 +17,11 @@
  */
 package gov.nasa.jpf.vm;
 
-import gov.nasa.jpf.Config;
-import gov.nasa.jpf.util.OATHash;
-
 import java.util.Arrays;
 import java.util.HashMap;
+
+import gov.nasa.jpf.Config;
+import gov.nasa.jpf.util.OATHash;
 
 /**
  * class that captures execution context consisting of executing thread and 
@@ -34,8 +34,8 @@ public class PreciseAllocationContext implements AllocationContext {
 
   // this is search global, i.e. does not have to be backtracked, but has to be
   // re-initialized between JPF runs (everything that changes hashCode)
-  static private HashMap<PreciseAllocationContext,PreciseAllocationContext> ccCache = new HashMap<PreciseAllocationContext,PreciseAllocationContext>();
-  
+  static private HashMap<PreciseAllocationContext,PreciseAllocationContext> ccCache = new HashMap<>();
+
   protected ThreadInfo ti;
   protected Instruction[] cc;
   protected int hashCode; // computed once during construction (from LookupContext)
@@ -58,7 +58,7 @@ public class PreciseAllocationContext implements AllocationContext {
   private static LookupContext lookupContext = new LookupContext();
   
   static boolean init (Config config) {
-    ccCache = new HashMap<PreciseAllocationContext,PreciseAllocationContext>();
+    ccCache = new HashMap<>();
     return true;
   }
   
@@ -163,5 +163,28 @@ public class PreciseAllocationContext implements AllocationContext {
     }
     sb.append("])");
     return sb.toString();
+  }
+
+  static class PreciseAllocationCtxStorage implements AllocationCtxStorage {
+    private static final long serialVersionUID = 1L;
+    final int ti;
+    final Instruction[] cc; //FIXME TODO
+    final int hashCode; // computed once during construction (from LookupContext)
+
+    public PreciseAllocationCtxStorage(ThreadInfo ti, Instruction[] cc, int hashCode) {
+      this.ti = ti.id;
+      this.cc = cc;
+      this.hashCode = hashCode;
+    }
+
+    @Override
+    public AllocationContext restore() {
+      return new PreciseAllocationContext(VM.getVM().getThreadList().getThreadInfoForId(ti), cc, hashCode);
+    }
+  }
+
+  @Override
+  public PreciseAllocationCtxStorage compact() {
+    return new PreciseAllocationCtxStorage(ti, cc, hashCode);
   }
 }

@@ -6,13 +6,13 @@
  * The Java Pathfinder core (jpf-core) platform is licensed under the
  * Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
- * 
- *        http://www.apache.org/licenses/LICENSE-2.0. 
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0.
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and 
+ * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 
@@ -32,11 +32,11 @@ public class EventChoiceGenerator extends ChoiceGeneratorBase<Event> {
   protected Event base;
   protected Event cur;
   protected int nProcessed;
-  
+
   protected EventContext ctx; // optional, can replace/expand events during execution
-  
+
   /**
-   * convenience method to get successors from current CG chain 
+   * convenience method to get successors from current CG chain
    */
   public static EventChoiceGenerator getNext (SystemState ss, String id, Event base, EventContext ctx){
     EventChoiceGenerator cgPrev = ss.getLastChoiceGeneratorOfType(EventChoiceGenerator.class);
@@ -46,17 +46,17 @@ public class EventChoiceGenerator extends ChoiceGeneratorBase<Event> {
       return cgPrev.getSuccessor(id, ctx);
     }
   }
-  
+
   public EventChoiceGenerator (String id, Event base){
     this(id, base, null);
   }
-  
+
   public EventChoiceGenerator (String id, Event base, EventContext ctx) {
     super(id);
     this.base = base;
     this.ctx = ctx;
   }
-  
+
   @Override
   public Event getChoice (int idx){
     if (idx >= 0){
@@ -69,16 +69,16 @@ public class EventChoiceGenerator extends ChoiceGeneratorBase<Event> {
           return e;
         }
       }
-      
+
     }
     throw new IllegalArgumentException("choice index out of range: " + idx);
   }
 
-  
+
   public void setContextExpander (EventContext ctx){
     this.ctx = ctx;
   }
-  
+
   public boolean containsMatchingChoice (Predicate<Event> predicate){
     for (Event e = base; e != null; e = e.getAlt()){
       if (predicate.isTrue(e)){
@@ -87,7 +87,7 @@ public class EventChoiceGenerator extends ChoiceGeneratorBase<Event> {
     }
     return false;
   }
-  
+
   public void addChoice (Event newEvent){
     for (Event e = base; e != null;){
       Event eAlt = e.getAlt();
@@ -98,24 +98,24 @@ public class EventChoiceGenerator extends ChoiceGeneratorBase<Event> {
       e = eAlt;
     }
   }
-  
+
   public EventChoiceGenerator getSuccessor (String id){
     return getSuccessor(id, null);
   }
-  
+
   public EventChoiceGenerator getSuccessor (String id, EventContext ctx){
     if (cur == null){
       return new EventChoiceGenerator(id, base.getNext(), ctx);
-      
+
     } else {
       Event next = cur.getNext();
-      
+
       if (cur instanceof CheckEvent){ // CheckEvents use next for conjunction
         while (next instanceof CheckEvent){
           next = next.getNext();
         }
       }
-      
+
       if (next != null){
         return new EventChoiceGenerator( id, next, ctx);
       } else {
@@ -123,7 +123,7 @@ public class EventChoiceGenerator extends ChoiceGeneratorBase<Event> {
       }
     }
   }
-  
+
   @Override
   public Event getNextChoice () {
     return cur;
@@ -150,7 +150,7 @@ public class EventChoiceGenerator extends ChoiceGeneratorBase<Event> {
       cur = cur.getAlt();
       nProcessed++;
     }
-    
+
     if (ctx != null){
       Event newCur = ctx.map(cur);
       if (newCur != cur){
@@ -192,14 +192,14 @@ public class EventChoiceGenerator extends ChoiceGeneratorBase<Event> {
         sb.append(',');
       }
       if (e == cur){
-        sb.append(MARKER);        
+        sb.append(MARKER);
       }
       sb.append(e.toString());
     }
     sb.append("],cur:");
     sb.append(cur);
     sb.append("}");
-    
+
     return sb.toString();
   }
 
@@ -207,16 +207,16 @@ public class EventChoiceGenerator extends ChoiceGeneratorBase<Event> {
   public Class<Event> getChoiceType() {
     return Event.class;
   }
-  
+
   protected Event[] getFirstNChoices(int n){
     Event[] a = new Event[n];
-    
+
     Event e = base;
     for (int i=0; i<n; i++){
       a[i] = e;
       e = e.getAlt();
     }
-    
+
     return a;
   }
 
@@ -229,22 +229,58 @@ public class EventChoiceGenerator extends ChoiceGeneratorBase<Event> {
   public Event[] getProcessedChoices(){
     return getFirstNChoices( getProcessedNumberOfChoices());
   }
-  
+
   @Override
   public Event[] getUnprocessedChoices(){
     int n=0;
     for (Event e=cur; e != null; e = e.getAlt()){
       n++;
     }
-    
+
     Event[] a = new Event[n];
-    
+
     Event e = cur;
     for (int i=0; i<n; i++){
       a[i] = e;
       e = e.getAlt();
     }
-    
-    return a;    
+
+    return a;
+  }
+
+  static class EventChoiceCgStorage extends BaseCgStorage<Event> {
+    private static final long serialVersionUID = 1L;
+    Event base; // FIXME TODO investigate
+    Event cur; // FIXME TODO investigate
+    int nProcessed;
+    EventContext ctx; // FIXME TODO investigate
+
+    @Override
+    public EventChoiceGenerator restore() {
+      EventChoiceGenerator cg = (EventChoiceGenerator)super.restore();
+      cg.cur = cur;
+      cg.nProcessed = nProcessed;
+      return cg;
+    }
+
+    @Override
+    public EventChoiceGenerator getObject() {
+      return new EventChoiceGenerator(getId(), base, ctx);
+    }
+  }
+
+  @Override
+  public EventChoiceCgStorage store() {
+    EventChoiceCgStorage storage = (EventChoiceCgStorage)super.store();
+    storage.base = base;
+    storage.cur = cur;
+    storage.nProcessed = nProcessed;
+    storage.ctx = ctx;
+    return storage;
+  }
+
+  @Override
+  protected EventChoiceCgStorage createStorage() {
+    return new EventChoiceCgStorage();
   }
 }

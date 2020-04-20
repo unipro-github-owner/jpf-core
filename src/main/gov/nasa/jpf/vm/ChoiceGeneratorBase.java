@@ -542,4 +542,46 @@ public abstract class ChoiceGeneratorBase<T> implements ChoiceGenerator<T> {
   public ChoiceGenerator<T> randomize(){
     return this;
   }
+
+  // we will use light approach here
+  protected static abstract class BaseCgStorage<T> extends CgStorage<T> {
+    private static final long serialVersionUID = 1L;
+    //SEEMS TO BE UNUSED private String id;
+    boolean isDone;
+    CgStorage<?> prev;
+    Instruction insn; // FIXME TODO should be serialized
+    Object attr; // FIXME TODO should be investigated
+    boolean isCascaded;
+
+    @Override
+    public ChoiceGenerator<T> restore() {
+      ChoiceGeneratorBase<T> cg = (ChoiceGeneratorBase<T>)getObject();
+      cg.isDone = isDone;
+      cg.prev = prev == null ? null : prev.restore();
+      cg.insn = insn;
+      cg.attr = attr;
+      cg.isCascaded = isCascaded;
+      return cg;
+    }
+
+    public abstract ChoiceGenerator<T> getObject();
+
+    public String getId() {
+      return null;//SEEMS TO BE UNUSED id;
+    }
+  }
+
+  @Override
+  public CgStorage<T> store() {
+    BaseCgStorage<T> storage = createStorage();
+    //SEEMS TO BE UNUSED storage.id = id;
+    storage.isDone = isDone;
+    storage.prev = prev == null ? null : prev.store();
+    storage.insn = insn;
+    storage.attr = attr;
+    storage.isCascaded = isCascaded;
+    return storage;
+  }
+
+  protected abstract BaseCgStorage<T> createStorage();
 }

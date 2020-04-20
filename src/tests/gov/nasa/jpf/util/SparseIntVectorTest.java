@@ -127,10 +127,10 @@ public class SparseIntVectorTest extends TestJPF {
           MAX_ROUNDS, (t2 - t1));
 
       Runtime.getRuntime().gc();
-      IntTable<Integer> tbl = new IntTable<Integer>();
+      IntTable<Integer, Integer> tbl = new IntTable<>();
       t1 = System.currentTimeMillis();
       for (int i = 0; i < MAX_ROUNDS; i++) {
-        IntTable.Snapshot<Integer> snap = tbl.getSnapshot();
+        IntTable.Snapshot<Integer, Integer> snap = tbl.getSnapshot(ie -> ie);
         for (int j = 0; j < MAX_SIZE; j++) {
           tbl.put(j, j);
 
@@ -138,7 +138,7 @@ public class SparseIntVectorTest extends TestJPF {
           assert e != null && e.val == j  : "wrong IntTable entry for index: " + j + " : " + e + " in round: " + i;
         }
         assert tbl.size() == MAX_SIZE : "wrong size: " + tbl.size();
-        tbl.restore(snap);
+        tbl.restore(snap, ie -> ie);
       }
       t2 = System.currentTimeMillis();
       System.out.printf("IntTable size %d, rounds %d: %d\n", MAX_SIZE,

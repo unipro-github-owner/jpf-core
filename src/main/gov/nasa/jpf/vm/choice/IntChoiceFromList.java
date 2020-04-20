@@ -19,6 +19,7 @@ package gov.nasa.jpf.vm.choice;
 
 import gov.nasa.jpf.Config;
 import gov.nasa.jpf.JPFException;
+import gov.nasa.jpf.vm.ChoiceGenerator;
 import gov.nasa.jpf.vm.IntChoiceGenerator;
 /**
  * @author jpenix
@@ -87,5 +88,17 @@ public class IntChoiceFromList extends NumberChoiceFromList<Integer> implements 
     }
 
     count = -1;
+  }
+
+  @Override
+  protected BaseCgStorage<Integer> createStorage() {
+    return new NumberListCgStorage<Integer>() {
+      private static final long serialVersionUID = 1L;
+
+      @Override
+      public ChoiceGenerator<Integer> getObject() {
+        return new IntChoiceFromList(id);
+      }
+    };
   }
 }

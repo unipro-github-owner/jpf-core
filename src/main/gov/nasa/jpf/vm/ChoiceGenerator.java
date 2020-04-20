@@ -17,9 +17,10 @@
  */
 package gov.nasa.jpf.vm;
 
-import gov.nasa.jpf.util.ObjectList;
-
+import java.io.Serializable;
 import java.util.Comparator;
+
+import gov.nasa.jpf.util.ObjectList;
 
 /**
  * generic interface for configurable choice generators
@@ -204,4 +205,11 @@ public interface ChoiceGenerator<T> extends Cloneable {
 
   <A> ObjectList.TypedIterator<A> attrIterator(Class<A> attrType);
 
+  static abstract class CgStorage<T> implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    public abstract ChoiceGenerator<T> restore();
+  }
+
+  CgStorage<T> store();
 }

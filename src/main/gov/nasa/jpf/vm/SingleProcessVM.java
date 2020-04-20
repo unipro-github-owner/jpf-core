@@ -298,8 +298,8 @@ public class SingleProcessVM extends VM {
   }
   
   @Override
-  public Map<Integer,IntTable<String>> getInitialInternStringsMap() {
-    Map<Integer,IntTable<String>> interns = new HashMap<Integer,IntTable<String>>();
+  public Map<Integer,IntTable<String, String>> getInitialInternStringsMap() {
+    Map<Integer,IntTable<String, String>> interns = new HashMap<>();
     interns.put(0, appCtx.getInternStrings());
     return interns;
   }

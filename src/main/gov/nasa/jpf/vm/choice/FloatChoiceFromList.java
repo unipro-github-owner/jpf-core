@@ -20,6 +20,7 @@ package gov.nasa.jpf.vm.choice;
 
 import gov.nasa.jpf.Config;
 import gov.nasa.jpf.JPFException;
+import gov.nasa.jpf.vm.ChoiceGenerator;
 import gov.nasa.jpf.vm.FloatChoiceGenerator;
 
 public class FloatChoiceFromList extends NumberChoiceFromList<Float> implements FloatChoiceGenerator {
@@ -81,4 +82,15 @@ public class FloatChoiceFromList extends NumberChoiceFromList<Float> implements 
     count = -1;
   }
 
+  @Override
+  protected BaseCgStorage<Float> createStorage() {
+    return new NumberListCgStorage<Float>() {
+      private static final long serialVersionUID = 1L;
+
+      @Override
+      public ChoiceGenerator<Float> getObject() {
+        return new FloatChoiceFromList(id);
+      }
+    };
+  }
 }

@@ -17,12 +17,13 @@
  */
 package gov.nasa.jpf.vm.choice;
 
+import java.io.PrintWriter;
+
 import gov.nasa.jpf.vm.ChoiceGenerator;
 import gov.nasa.jpf.vm.ChoiceGeneratorBase;
 import gov.nasa.jpf.vm.ThreadChoiceGenerator;
 import gov.nasa.jpf.vm.ThreadInfo;
-
-import java.io.PrintWriter;
+import gov.nasa.jpf.vm.VM;
 
 /**
  * a pseudo CG that is used to break transitions. It can be used to break and
@@ -113,4 +114,36 @@ public class BreakGenerator extends ChoiceGeneratorBase<ThreadInfo> implements T
     return true; // that's the whole point of having a BreakGenerator
   }
 
+  static class BreakCgStorage extends BaseCgStorage<ThreadInfo> {
+    private static final long serialVersionUID = 1L;
+    int ti;
+    int state = -1;
+    boolean isTerminator;
+
+    @Override
+    public BreakGenerator restore() {
+      BreakGenerator cg = (BreakGenerator)super.restore();
+      cg.state = state;
+      return cg;
+    }
+
+    @Override
+    public BreakGenerator getObject() {
+      return new BreakGenerator(getId(), VM.getVM().getThreadList().getThreadInfoForId(ti), isTerminator);
+    }
+  }
+
+  @Override
+  public BreakCgStorage store() {
+    BreakCgStorage storage = (BreakCgStorage)super.store();
+    storage.ti = ti.getId();
+    storage.state = state;
+    storage.isTerminator = isTerminator;
+    return storage;
+  }
+
+  @Override
+  protected BreakCgStorage createStorage() {
+    return new BreakCgStorage();
+  }
 }

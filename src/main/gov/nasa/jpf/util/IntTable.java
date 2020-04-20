@@ -17,9 +17,10 @@
  */
 package gov.nasa.jpf.util;
 
-import gov.nasa.jpf.JPFException;
-
 import java.util.Iterator;
+import java.util.function.Function;
+
+import gov.nasa.jpf.JPFException;
 
 /**
  * A hash map that holds int values associated with generic key objects.
@@ -30,7 +31,7 @@ import java.util.Iterator;
  *
  * note: this does deep copy clones, which can be quite expensive
  */
-public final class IntTable<E> implements Iterable<IntTable.Entry<E>>, Cloneable{
+public final class IntTable<E, S> implements Iterable<IntTable.Entry<E>>, Cloneable{
   static final int INIT_TBL_POW = 7;
   static final double MAX_LOAD = 0.80;
   
@@ -100,16 +101,16 @@ public final class IntTable<E> implements Iterable<IntTable.Entry<E>>, Cloneable
   /**
    * helper class to store a compact, invariant representation of this table
    */
-  public static class Snapshot<E> {
+  public static class Snapshot<E, S> {
     protected final int tblSize;
     protected final int tblPow;
     
     protected final int[] indices;
-    protected final E[] keys;
+    protected final S[] keys;
     protected final int[] vals;
     
     @SuppressWarnings("unchecked")
-    protected Snapshot (IntTable<E> t){
+    protected Snapshot (IntTable<E, S> t, Function<E, S> converter){
       Entry<E>[] tbl = t.table;
       int nEntries = t.size;
             
@@ -117,7 +118,7 @@ public final class IntTable<E> implements Iterable<IntTable.Entry<E>>, Cloneable
       tblPow = t.tblPow;
       
       indices = new int[nEntries];
-      keys = (E[]) new Object[nEntries];
+      keys = (S[]) new Object[nEntries];
       vals = new int[nEntries];
       
       int j = 0;
@@ -127,7 +128,7 @@ public final class IntTable<E> implements Iterable<IntTable.Entry<E>>, Cloneable
           if (e.next == null){ // just one entry under this head
             
             indices[j] = i;
-            keys[j] = e.key;
+            keys[j] = converter.apply(e.key);
             vals[j] = e.val;
             j++;
             
@@ -141,9 +142,9 @@ public final class IntTable<E> implements Iterable<IntTable.Entry<E>>, Cloneable
 
             int k = j+n-1;
             j += n;
-            for (; e != null; e = e.next){  
+            for (; e != null; e = e.next){
               indices[k] = i;
-              keys[k] = e.key;
+              keys[k] = converter.apply(e.key);
               vals[k] = e.val;
               k--;
             }
@@ -162,9 +163,9 @@ public final class IntTable<E> implements Iterable<IntTable.Entry<E>>, Cloneable
   protected int size;          // number of Entry<E> objects reachable from table
   
   protected Entry<E> nullEntry = null;
-  
-  Snapshot<E> lastSnapshot;   // cache for the last snapshot (nulled once the IntTable is changed)
-  
+
+  Snapshot<E, S> lastSnapshot;   // cache for the last snapshot (nulled once the IntTable is changed)
+
   public IntTable() {
     this(INIT_TBL_POW);
   }
@@ -173,27 +174,27 @@ public final class IntTable<E> implements Iterable<IntTable.Entry<E>>, Cloneable
     newTable(pow);
     size = 0;
   }
-  
-  public Snapshot<E> getSnapshot(){
+
+  public Snapshot<E, S> getSnapshot(Function<E, S> converter){
     if (lastSnapshot == null) {
-      lastSnapshot = new Snapshot<E>(this);
+      lastSnapshot = new Snapshot<E, S>(this, converter);
     }
     
     return lastSnapshot;
   }
   
   @SuppressWarnings("unchecked")
-  public void restore (Snapshot<E> snapshot){
+  public void restore (Snapshot<E, S> snapshot, Function<S, E> converter){
     Entry<E>[] tbl = new Entry[snapshot.tblSize];
     
     int[] indices = snapshot.indices;
-    E[] keys = snapshot.keys;
-    int[] vals = snapshot.vals; 
+    S[] keys = snapshot.keys;
+    int[] vals = snapshot.vals;
     int nEntries = vals.length;
     
     for (int i=0; i<nEntries; i++){
       int idx = indices[i];
-      tbl[idx] = new Entry<E>( keys[i], vals[i], tbl[idx]);
+      tbl[idx] = new Entry<E>(converter.apply(keys[i]), vals[i], tbl[idx]);
     }
     
     table = tbl;
@@ -207,10 +208,10 @@ public final class IntTable<E> implements Iterable<IntTable.Entry<E>>, Cloneable
 
   // this is a deep copy (needs to be because entries are reused when growing the table)
   @Override
-  public IntTable<E> clone() {
+  public IntTable<E, S> clone() {
     try {
       @SuppressWarnings("unchecked")
-      IntTable<E> t = (IntTable<E>)super.clone();
+      IntTable<E, S> t = (IntTable<E, S>)super.clone();
       Entry<E>[] tbl = table.clone();
       t.table = tbl;
 
@@ -321,6 +322,7 @@ public final class IntTable<E> implements Iterable<IntTable.Entry<E>>, Cloneable
         } else {
           last.next = newEntry;
         }
+        break;
       }
     }    
   }

@@ -18,10 +18,16 @@
 
 package gov.nasa.jpf.vm.choice;
 
-import gov.nasa.jpf.Config;
-import gov.nasa.jpf.vm.*;
-
 import java.util.ArrayList;
+
+import gov.nasa.jpf.Config;
+import gov.nasa.jpf.vm.ChoiceGeneratorBase;
+import gov.nasa.jpf.vm.ClassInfo;
+import gov.nasa.jpf.vm.ElementInfo;
+import gov.nasa.jpf.vm.Heap;
+import gov.nasa.jpf.vm.MJIEnv;
+import gov.nasa.jpf.vm.ReferenceChoiceGenerator;
+import gov.nasa.jpf.vm.VM;
 
 /**
  * a choice generator that enumerates the set of all objects of a certain type. This
@@ -38,10 +44,13 @@ public class TypedObjectChoice extends ChoiceGeneratorBase<Integer> implements R
   // our enumeration state
   protected int count;
 
-  
-  public TypedObjectChoice (Config conf, String id)  {
+  private TypedObjectChoice(String id) {
     super(id);
-    
+  }
+
+  public TypedObjectChoice (Config conf, String id)  {
+    this(id);
+
     Heap heap = VM.getVM().getHeap();
     
     type = conf.getString(id + ".type");
@@ -156,5 +165,40 @@ public class TypedObjectChoice extends ChoiceGeneratorBase<Integer> implements R
   @Override
   public Class<Integer> getChoiceType() {
     return Integer.class;
+  }
+
+  static class TypedObjectCgStorage extends BaseCgStorage<Integer> {
+    private static final long serialVersionUID = 1L;
+    String type;
+    int[] values;
+    int count;
+
+    @Override
+    public TypedObjectChoice restore() {
+      TypedObjectChoice cg = (TypedObjectChoice)super.restore();
+      cg.type = type;
+      cg.values = values;
+      cg.count = count;
+      return cg;
+    }
+
+    @Override
+    public TypedObjectChoice getObject() {
+      return new TypedObjectChoice(getId());
+    }
+  }
+
+  @Override
+  public TypedObjectCgStorage store() {
+    TypedObjectCgStorage storage = (TypedObjectCgStorage)super.store();
+    storage.type = type;
+    storage.values = values;
+    storage.count = count;
+    return storage;
+  }
+
+  @Override
+  protected TypedObjectCgStorage createStorage() {
+    return new TypedObjectCgStorage();
   }
 }

@@ -18,11 +18,13 @@
 
 package gov.nasa.jpf.vm.choice;
 
+import java.util.Arrays;
+import java.util.Comparator;
+
 import gov.nasa.jpf.JPFException;
 import gov.nasa.jpf.vm.ThreadChoiceGenerator;
 import gov.nasa.jpf.vm.ThreadInfo;
-import java.util.Arrays;
-import java.util.Comparator;
+import gov.nasa.jpf.vm.VM;
 
 /**
  * a ThreadChoiceFromSet that reschedules the specified thread with exceptions
@@ -31,10 +33,14 @@ public class ExceptionThreadChoiceFromSet extends ThreadChoiceFromSet {
 
   protected ThreadInfo exceptionThread;
   protected String[] exceptions;
-  
-  public ExceptionThreadChoiceFromSet (String id, ThreadInfo[] runnables, ThreadInfo exceptionThread, String[] exceptionClsNames){
+
+  private ExceptionThreadChoiceFromSet(String id) {
     super(id);
-    
+  }
+
+  public ExceptionThreadChoiceFromSet (String id, ThreadInfo[] runnables, ThreadInfo exceptionThread, String[] exceptionClsNames){
+    this(id);
+
     this.exceptionThread = exceptionThread;
     
     values = new ThreadInfo[runnables.length + exceptionClsNames.length];
@@ -98,5 +104,37 @@ public class ExceptionThreadChoiceFromSet extends ThreadChoiceFromSet {
       exceptions[j] = tmpX;
     }
     return this;
+  }
+
+  static class ExceptionThreadChoiceCgStorage extends ThreadChoiceCgStorage {
+    private static final long serialVersionUID = 1L;
+    int exceptionThread;
+    String[] exceptions;
+
+    @Override
+    public ExceptionThreadChoiceFromSet restore() {
+      ExceptionThreadChoiceFromSet cg = (ExceptionThreadChoiceFromSet)super.restore();
+      cg.exceptionThread = VM.getVM().getThreadList().getThreadInfoForId(exceptionThread);
+      cg.exceptions = exceptions;
+      return cg;
+    }
+
+    @Override
+    public ExceptionThreadChoiceFromSet getObject() {
+      return new ExceptionThreadChoiceFromSet(getId());
+    }
+  }
+
+  @Override
+  public ExceptionThreadChoiceCgStorage store() {
+    ExceptionThreadChoiceCgStorage storage = (ExceptionThreadChoiceCgStorage)super.store();
+    storage.exceptionThread = exceptionThread.getId();
+    storage.exceptions = exceptions;
+    return storage;
+  }
+
+  @Override
+  protected ExceptionThreadChoiceCgStorage createStorage() {
+    return new ExceptionThreadChoiceCgStorage();
   }
 }

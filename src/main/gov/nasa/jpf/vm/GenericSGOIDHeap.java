@@ -19,6 +19,7 @@ package gov.nasa.jpf.vm;
 
 import gov.nasa.jpf.Config;
 import gov.nasa.jpf.util.IntTable;
+import gov.nasa.jpf.vm.AllocationContext.AllocationCtxStorage;
 
 /**
  * abstract Heap trait that implements SGOIDs by means of a search global
@@ -28,43 +29,54 @@ import gov.nasa.jpf.util.IntTable;
  */
 public abstract class GenericSGOIDHeap extends GenericHeap {
 
+  static class SgoidHeapStorage extends HeapStorage {
+    private static final long serialVersionUID = 1L;
+    IntTable.Snapshot<AllocationContext, AllocationCtxStorage> ctxSnap;
+  }
+
   static class GenericSGOIDHeapMemento extends GenericHeapMemento {
-    IntTable.Snapshot<AllocationContext> ctxSnap;
-    
     GenericSGOIDHeapMemento (GenericSGOIDHeap heap) {
       super(heap);
-      
-      ctxSnap = heap.allocCounts.getSnapshot();
     }
 
     @Override
-    public Heap restore(Heap inSitu) {
-      super.restore( inSitu);
-      
-      GenericSGOIDHeap heap = (GenericSGOIDHeap) inSitu;
-      heap.allocCounts.restore(ctxSnap);
-      
+    HeapStorage createStorage() {
+      return new SgoidHeapStorage();
+    }
+
+    @Override
+    HeapStorage fill(GenericHeap heap) {
+      SgoidHeapStorage storage = (SgoidHeapStorage)super.fill(heap);
+      storage.ctxSnap = ((GenericSGOIDHeap)heap).allocCounts.getSnapshot(ctx -> ctx.compact());
+      return storage;
+    }
+
+    @Override
+    public Heap restore(Heap inSitu, Object obj) {
+      GenericSGOIDHeap heap = (GenericSGOIDHeap)super.restore(inSitu, obj);
+      SgoidHeapStorage storage = (SgoidHeapStorage)obj;
+      heap.allocCounts.restore(storage.ctxSnap, stoarge -> stoarge.restore());
       return heap;
     }
   }
   
   // these are search global
   protected int nextSgoid;
-  protected IntTable<Allocation> sgoids;
-  
-  // this is state managed 
-  // NOTE - this has to be included in the mementos of concrete Heap implementations 
-  protected IntTable<AllocationContext> allocCounts;
-  
+  protected IntTable<Allocation, Allocation> sgoids;
+
+  // this is state managed
+  // NOTE - this has to be included in the mementos of concrete Heap implementations
+  protected IntTable<AllocationContext, AllocationCtxStorage> allocCounts;
+
   protected GenericSGOIDHeap (Config config, KernelState ks){
     super(config, ks);
     
     // static inits
     initAllocationContext(config);
-    sgoids = new IntTable<Allocation>();
+    sgoids = new IntTable<Allocation, Allocation>();
     nextSgoid = 0;
-    
-    allocCounts = new IntTable<AllocationContext>();
+
+    allocCounts = new IntTable<AllocationContext, AllocationCtxStorage>();
   }
   
   

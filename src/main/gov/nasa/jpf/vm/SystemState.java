@@ -17,13 +17,14 @@
  */
 package gov.nasa.jpf.vm;
 
+import java.io.PrintWriter;
+import java.util.LinkedHashMap;
+
 import gov.nasa.jpf.Config;
 import gov.nasa.jpf.JPFException;
 import gov.nasa.jpf.util.TypeSpecMatcher;
+import gov.nasa.jpf.vm.ChoiceGenerator.CgStorage;
 import gov.nasa.jpf.vm.choice.BreakGenerator;
-
-import java.io.PrintWriter;
-import java.util.LinkedHashMap;
 
 
 /**
@@ -60,34 +61,22 @@ public class SystemState {
    * but this could be bypassed.
    */
   static class Memento {
-    ChoiceGenerator<?> curCg;  // the ChoiceGenerator for the current transition
-    ChoiceGenerator<?> nextCg;
+    CgStorage<?> curCg;  // the ChoiceGenerator for the current transition
+    CgStorage<?> nextCg;
     int atomicLevel;
     ChoicePoint trace;
-    ThreadInfo execThread;
+    int execThread;
     int id;              // the state id
     LinkedHashMap<Object,ClosedMemento> restorers;
-    
-    static protected ChoiceGenerator<?> cloneCG( ChoiceGenerator<?> cg){
-      if (cg != null){
-        try {
-          return cg.deepClone();
-        } catch (CloneNotSupportedException cnsx){
-          throw new JPFException("clone failed: " + cg);          
-        }
-      } else {
-        return null;
-      }
-    }
-    
+
     Memento (SystemState ss) {
-      nextCg = ss.nextCg;      
-      curCg = ss.curCg;
-      
+      nextCg = ss.nextCg == null ? null : ss.nextCg.store();
+      curCg = ss.curCg == null ? null : ss.curCg.store();
+
       atomicLevel = ss.entryAtomicLevel; // store the value we had when we started the transition
       id = ss.id;
-      execThread = ss.execThread;
-      
+      execThread = ss.execThread.getId();
+
       // we can just copy the reference since it is re-created in each transition
       restorers = ss.restorers;
     }
@@ -97,13 +86,13 @@ public class SystemState {
      * of the same CG, i.e. nextCG is reset
      */
     void backtrack (SystemState ss) {
-      ss.nextCg = null; // this is important - the nextCG will be set by the next Transition      
-      ss.curCg = curCg;
-      
+      ss.nextCg = null; // this is important - the nextCG will be set by the next Transition
+      ss.curCg = curCg == null ? null : curCg.restore();
+
       ss.atomicLevel = atomicLevel;
       ss.id = id;
-      ss.execThread = execThread;
-      
+      ss.execThread = VM.getVM().getThreadList().getThreadInfoForId(execThread);
+
       if (restorers != null){
         for (ClosedMemento r : restorers.values()){
           r.restore();
@@ -133,31 +122,22 @@ public class SystemState {
   static class RestorableMemento extends Memento {
     RestorableMemento (SystemState ss){
       super(ss);
-      
-      nextCg = cloneCG(nextCg);
-      curCg = cloneCG( curCg);
     }
-    
-    @Override
-	void backtrack (SystemState ss){
-      super.backtrack(ss);
-      ss.curCg = cloneCG(curCg);
-    }
-    
+
     /**
      * this one is used if we restore and then advance, i.e. it might change the CG on
      * the next advance (if nextCg was set)
      */
     @Override
-	void restore (SystemState ss) {      
+	void restore (SystemState ss) {
       // if we don't clone them on restore, it means we can only restore this memento once
-      ss.nextCg = cloneCG(nextCg);
-      ss.curCg = cloneCG(curCg);
+      ss.nextCg = nextCg == null ? null : nextCg.restore();
+      ss.curCg = curCg == null ? null : curCg.restore();
 
       ss.atomicLevel = atomicLevel;
       ss.id = id;
-      ss.execThread = execThread;
-      
+      ss.execThread = VM.getVM().getThreadList().getThreadInfoForId(execThread);
+
       if (restorers != null){
         for (ClosedMemento r : restorers.values()){
           r.restore();

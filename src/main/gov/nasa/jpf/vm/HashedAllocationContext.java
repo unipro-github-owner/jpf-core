@@ -17,12 +17,13 @@
  */
 package gov.nasa.jpf.vm;
 
-// see mixinJPFStack() comments
-import sun.misc.SharedSecrets;
-import sun.misc.JavaLangAccess;
+import static gov.nasa.jpf.util.OATHash.hashFinalize;
+import static gov.nasa.jpf.util.OATHash.hashMixin;
 
 import gov.nasa.jpf.Config;
-import static gov.nasa.jpf.util.OATHash.*;
+import sun.misc.JavaLangAccess;
+// see mixinJPFStack() comments
+import sun.misc.SharedSecrets;
 
 /**
  * an AllocationContext that uses a hash value for comparison. This is
@@ -230,5 +231,24 @@ public class HashedAllocationContext implements AllocationContext {
     h = hashFinalize(h);
     
     return new HashedAllocationContext(h);
+  }
+
+  static class HashedAllocationCtxStorage implements AllocationCtxStorage {
+    private static final long serialVersionUID = 1L;
+    final int id;
+
+    public HashedAllocationCtxStorage(int id) {
+      this.id = id;
+    }
+
+    @Override
+    public AllocationContext restore() {
+      return new HashedAllocationContext(id);
+    }
+  }
+
+  @Override
+  public HashedAllocationCtxStorage compact() {
+    return new HashedAllocationCtxStorage(id);
   }
 }

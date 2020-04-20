@@ -17,6 +17,8 @@
  */
 package gov.nasa.jpf.vm;
 
+import gov.nasa.jpf.vm.Path.PathStorage;
+import gov.nasa.jpf.vm.Transition.TransitionStorage;
 
 /**
  * NOTE - making VMStates fully restorable is currently very
@@ -25,25 +27,22 @@ package gov.nasa.jpf.vm;
 public class RestorableVMState {
   
   /** the set of last executed insns */
-  Transition lastTransition;
-  
+  private TransitionStorage lastTransition;
+
   /* these are the icky parts - the history is kept as stacks inside the
    * VM (for restoration reasons), hence we have to copy it if we want
    * to restore a state. Since this is really expensive, it has to be done
    * on demand, with varying degrees of information
    */
-  Path path;
-  
-  Backtracker.RestorableState bkstate;
-  
-  VM vm;
-  
-  RestorableVMState (VM vm) {
-    this.vm = vm;
+  private PathStorage path;
 
-    path = vm.getClonedPath();
+  Backtracker.RestorableState bkstate;
+
+  RestorableVMState (VM vm) {
+    Path p = vm.getPath();
+    path = p == null ? null : p.store();
     bkstate = vm.getBacktracker().getRestorableState();
-    lastTransition = vm.lastTrailInfo;
+    lastTransition = vm.lastTrailInfo == null ? null : vm.lastTrailInfo.store();
   }
   
   public Backtracker.RestorableState getBkState() {
@@ -51,15 +50,19 @@ public class RestorableVMState {
   }
   
   public Transition getLastTransition () {
-    return lastTransition;
+    return lastTransition == null ? null : lastTransition.restore();
   }
-  
+
+  public boolean hasNoPath() {
+    return path == null;
+  }
+
   public Path getPath () {
-    return path;
+    return path.restore();
   }
   
   public int getThread () {
-    return lastTransition.getThreadIndex();
+    return lastTransition.ti;
   }
 
 }

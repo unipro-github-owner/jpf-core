@@ -27,10 +27,43 @@ import gov.nasa.jpf.vm.ThreadInfo;
  */
 public class ExposureCG extends ThreadChoiceFromSet {
   protected int exposedObjRef;
-  
+
+  private ExposureCG(String id) {
+    super(id);
+  }
+
   public ExposureCG (String id, ThreadInfo[] set, ElementInfo eiExposed){
     super( id, set, true);
     
     exposedObjRef = eiExposed.getObjectRef();
+  }
+
+  static class ExposureCgStorage extends ThreadChoiceCgStorage {
+    private static final long serialVersionUID = 1L;
+    int exposedObjRef;
+
+    @Override
+    public ExposureCG restore() {
+      ExposureCG cg = (ExposureCG)super.restore();
+      cg.exposedObjRef = exposedObjRef;
+      return cg;
+    }
+
+    @Override
+    public ExposureCG getObject() {
+      return new ExposureCG(getId());
+    }
+  }
+
+  @Override
+  public ExposureCgStorage store() {
+    ExposureCgStorage storage = (ExposureCgStorage)super.store();
+    storage.exposedObjRef = exposedObjRef;
+    return storage;
+  }
+
+  @Override
+  protected ExposureCgStorage createStorage() {
+    return new ExposureCgStorage();
   }
 }

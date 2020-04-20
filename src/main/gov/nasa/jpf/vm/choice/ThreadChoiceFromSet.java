@@ -17,13 +17,16 @@
  */
 package gov.nasa.jpf.vm.choice;
 
-import gov.nasa.jpf.vm.ChoiceGeneratorBase;
-import gov.nasa.jpf.vm.ThreadChoiceGenerator;
-import gov.nasa.jpf.vm.ThreadInfo;
-
 import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.stream.Stream;
+
+import gov.nasa.jpf.vm.ChoiceGeneratorBase;
+import gov.nasa.jpf.vm.ThreadChoiceGenerator;
+import gov.nasa.jpf.vm.ThreadInfo;
+import gov.nasa.jpf.vm.ThreadList;
+import gov.nasa.jpf.vm.VM;
 
 public class ThreadChoiceFromSet extends ChoiceGeneratorBase<ThreadInfo> implements ThreadChoiceGenerator {
 
@@ -192,5 +195,47 @@ public class ThreadChoiceFromSet extends ChoiceGeneratorBase<ThreadInfo> impleme
   @Override
   public boolean isSchedulingPoint() {
     return isSchedulingPoint;
+  }
+
+  static class ThreadChoiceCgStorage extends BaseCgStorage<ThreadInfo> {
+    private static final long serialVersionUID = 1L;
+    boolean isSchedulingPoint;
+    int[] values;
+    int count;
+
+    @Override
+    public ThreadChoiceFromSet restore() {
+      ThreadChoiceFromSet cg = (ThreadChoiceFromSet)super.restore();
+      cg.isSchedulingPoint = isSchedulingPoint;
+      cg.count = count;
+      final ThreadList tl = VM.getVM().getThreadList();
+      cg.values = new ThreadInfo[values.length];
+      for (int i = 0; i < values.length; ++i) {
+        cg.values[i] = tl.getThreadInfoForId(values[i]);
+      }
+      return cg;
+    }
+
+    @Override
+    public ThreadChoiceFromSet getObject() {
+      return new ThreadChoiceFromSet(getId());
+    }
+  }
+
+  @Override
+  public ThreadChoiceCgStorage store() {
+    ThreadChoiceCgStorage storage = (ThreadChoiceCgStorage)super.store();
+    storage.isSchedulingPoint = isSchedulingPoint;
+    storage.count = count;
+    storage.values = Stream.of(values)
+        .filter(ti -> ti != null)
+        .mapToInt(ThreadInfo::getId)
+        .toArray();
+    return storage;
+  }
+
+  @Override
+  protected ThreadChoiceCgStorage createStorage() {
+    return new ThreadChoiceCgStorage();
   }
 }

@@ -29,7 +29,7 @@ public class IntTableTest extends TestJPF {
 
   @Test
   public void testBasicPut(){
-    IntTable<Integer> tbl = new IntTable<Integer>();
+    IntTable<Integer, Integer> tbl = new IntTable<>();
 
     assert tbl.size() == 0;
     final int N = 5000;
@@ -47,7 +47,7 @@ public class IntTableTest extends TestJPF {
   
   @Test
   public void testStringKeyAdd(){
-    IntTable<String> tbl = new IntTable<String>();
+    IntTable<String, String> tbl = new IntTable<>();
 
     assert tbl.size() == 0;
     final int N = 5000;
@@ -65,13 +65,13 @@ public class IntTableTest extends TestJPF {
 
   @Test
   public void testClone(){
-    IntTable<String> tbl = new IntTable<String>(3); // make it small so that we rehash
+    IntTable<String, String> tbl = new IntTable<>(3); // make it small so that we rehash
 
     tbl.add("1", 1);
     tbl.add("2", 2);
     tbl.add("3", 3);
 
-    IntTable<String> t1 = tbl.clone();
+    IntTable<String, String> t1 = tbl.clone();
 
     for (int i=10; i<20; i++){
       t1.add(Integer.toString(i), i);
@@ -94,24 +94,24 @@ public class IntTableTest extends TestJPF {
   
   @Test
   public void testSnapshot (){
-    IntTable<String> tbl = new IntTable<String>();
-    
+    IntTable<String, String> tbl = new IntTable<>();
+
     tbl.add("1", 1);
     tbl.add("2", 2);
     tbl.add("3", 3);
     tbl.add("12345", 12345);
     tbl.dump();
-    
-    IntTable.Snapshot<String> snap = tbl.getSnapshot();
-    
+
+    IntTable.Snapshot<String, String> snap = tbl.getSnapshot(str -> str);
+
     tbl.remove("3");
     tbl.remove("1");
     tbl.add("42", 42);
     tbl.dump();
     
     assertTrue(tbl.size() == 3);
-    
-    tbl.restore(snap);
+
+    tbl.restore(snap, str -> str);
     tbl.dump();
     
     assertTrue(tbl.size() == 4);

@@ -59,7 +59,7 @@ public class JPF_gov_nasa_jpf_vm_Verify extends NativePeer {
   
   // those are used to store search global int values (e.g. from TestJPF derived classes)
   static int[] counter;
-  static IntTable<String> map;
+  static IntTable<String, String> map;
 
   public static int heuristicSearchValue;
   
@@ -138,7 +138,7 @@ public class JPF_gov_nasa_jpf_vm_Verify extends NativePeer {
   @MJI
   public static void putValue__Ljava_lang_String_2I__V (MJIEnv env, int clsObjRef, int keyRef, int val) {
     if (map == null) {
-      map = new IntTable<String>();
+      map = new IntTable<>();
     }
     
     String key = env.getStringObject(keyRef);

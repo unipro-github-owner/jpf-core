@@ -165,4 +165,38 @@ public class BooleanChoiceGenerator extends ChoiceGeneratorBase<Boolean> {
     next = random.nextBoolean();
     return this;
   }
+
+  static class BooleanCgStorage extends BaseCgStorage<Boolean> {
+    private static final long serialVersionUID = 1L;
+    boolean falseFirst = true;
+    int count = -1;
+    boolean next;
+
+    @Override
+    public BooleanChoiceGenerator restore() {
+      BooleanChoiceGenerator cg = (BooleanChoiceGenerator)super.restore();
+      cg.count = count;
+      cg.next = next;
+      return cg;
+    }
+
+    @Override
+    public BooleanChoiceGenerator getObject() {
+      return new BooleanChoiceGenerator(getId(), falseFirst);
+    }
+  }
+
+  @Override
+  public BooleanCgStorage store() {
+    BooleanCgStorage storage = (BooleanCgStorage)super.store();
+    storage.falseFirst = falseFirst;
+    storage.count = count;
+    storage.next = next;
+    return storage;
+  }
+
+  @Override
+  protected BooleanCgStorage createStorage() {
+    return new BooleanCgStorage();
+  }
 }

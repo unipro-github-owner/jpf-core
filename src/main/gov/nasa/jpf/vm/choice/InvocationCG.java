@@ -117,4 +117,38 @@ public class InvocationCG extends ChoiceGeneratorBase<Invocation> {
     isDone = false;
   }
 
+  static class InvocationCgStorage extends BaseCgStorage<Invocation> {
+    private static final long serialVersionUID = 1L;
+    List<Invocation> invokes; // FIXME TODO investigate
+    int cur = -1;
+
+    @Override
+    public InvocationCG restore() {
+      InvocationCG cg = (InvocationCG)super.restore();
+      if (cur > -1) {
+        while (cg.it.hasNext() && cur != cg.it.nextIndex()) {
+          cg.cur = cg.it.next();
+        }
+      }
+      return cg;
+    }
+
+    @Override
+    public InvocationCG getObject() {
+      return new InvocationCG(getId(), invokes);
+    }
+  }
+
+  @Override
+  public InvocationCgStorage store() {
+    InvocationCgStorage storage = (InvocationCgStorage)super.store();
+    storage.invokes = invokes;
+    storage.cur = cur == null ? -1 : (it.hasNext() ? it.nextIndex() - 1 : invokes.size() - 1);
+    return storage;
+  }
+
+  @Override
+  protected InvocationCgStorage createStorage() {
+    return new InvocationCgStorage();
+  }
 }

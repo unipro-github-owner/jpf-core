@@ -28,9 +28,13 @@ public class RandomOrderIntCG extends ChoiceGeneratorBase<Integer> implements In
   protected int[] choices;
   
   protected int nextIdx;
-  
+
+  private RandomOrderIntCG(String id) {
+    super(id);
+  }
+
   public RandomOrderIntCG(IntChoiceGenerator sub) {
-    super(sub.getId());
+    this(sub.getId());
     setPreviousChoiceGenerator(sub.getPreviousChoiceGenerator());
     choices = new int[sub.getTotalNumberOfChoices()];
     for (int i = 0; i < choices.length; i++) {
@@ -90,5 +94,37 @@ public class RandomOrderIntCG extends ChoiceGeneratorBase<Integer> implements In
   @Override
   public Class<Integer> getChoiceType() {
     return Integer.class;
+  }
+
+  static class RandomOrderIntCgStorage extends BaseCgStorage<Integer> {
+    private static final long serialVersionUID = 1L;
+    int[] choices;
+    int nextIdx;
+
+    @Override
+    public RandomOrderIntCG restore() {
+      RandomOrderIntCG cg = (RandomOrderIntCG)super.restore();
+      cg.choices = choices;
+      cg.nextIdx = nextIdx;
+      return cg;
+    }
+
+    @Override
+    public RandomOrderIntCG getObject() {
+      return new RandomOrderIntCG(getId());
+    }
+  }
+
+  @Override
+  public RandomOrderIntCgStorage store() {
+    RandomOrderIntCgStorage storage = (RandomOrderIntCgStorage)super.store();
+    storage.choices = choices;
+    storage.nextIdx = nextIdx;
+    return storage;
+  }
+
+  @Override
+  protected RandomOrderIntCgStorage createStorage() {
+    return new RandomOrderIntCgStorage();
   }
 }
