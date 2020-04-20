@@ -27,7 +27,8 @@ import java.util.Iterator;
 public class Transition implements Iterable<Step>, Cloneable {
 
   ChoiceGenerator<?> cg;
-  ThreadInfo ti;
+  int threadIndex;
+  //ThreadInfo ti;
 
   private Step   first, last;
   int nSteps;
@@ -39,7 +40,8 @@ public class Transition implements Iterable<Step>, Cloneable {
 
   public Transition (ChoiceGenerator<?> cg, ThreadInfo ti) {
     this.cg = cg;
-    this.ti = ti;
+    //this.ti = ti;
+    this.threadIndex = ti.getId();
   }
 
   @Override
@@ -49,7 +51,7 @@ public class Transition implements Iterable<Step>, Cloneable {
       
       // the deep copy references
       t.cg = cg.clone();
-      t.ti = (ThreadInfo)ti.clone();
+      //t.ti = (ThreadInfo)ti.clone();
       
       return t;
       
@@ -104,13 +106,14 @@ public class Transition implements Iterable<Step>, Cloneable {
   public int getStepCount () {
     return nSteps;
   }
-
+/*
   public ThreadInfo getThreadInfo() {
     return ti;
   }
-
+*/
   public int getThreadIndex () {
-    return ti.getId();
+    //return ti.getId();
+    return this.threadIndex;
   }
 
   public ChoiceGenerator<?> getChoiceGenerator() {

@@ -6,16 +6,21 @@
  * The Java Pathfinder core (jpf-core) platform is licensed under the
  * Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
- * 
- *        http://www.apache.org/licenses/LICENSE-2.0. 
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0.
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and 
+ * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package gov.nasa.jpf;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Logger;
 
 import gov.nasa.jpf.report.Publisher;
 import gov.nasa.jpf.report.PublisherExtension;
@@ -27,14 +32,9 @@ import gov.nasa.jpf.util.JPFLogger;
 import gov.nasa.jpf.util.LogManager;
 import gov.nasa.jpf.util.Misc;
 import gov.nasa.jpf.util.RunRegistry;
-import gov.nasa.jpf.vm.VM;
 import gov.nasa.jpf.vm.NoOutOfMemoryErrorProperty;
+import gov.nasa.jpf.vm.VM;
 import gov.nasa.jpf.vm.VMListener;
-
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.logging.Logger;
 
 
 /**
@@ -42,7 +42,7 @@ import java.util.logging.Logger;
  * instantiates the Search and VM objects, and kicks off the Search
  */
 public class JPF implements Runnable {
-  
+
   public static String VERSION = "8.0"; // the major version number
 
   static Logger logger     = null; // initially
@@ -50,7 +50,7 @@ public class JPF implements Runnable {
   public enum Status { NEW, RUNNING, DONE };
 
   class ConfigListener implements ConfigChangeListener {
-    
+
     /**
      * check for new listeners that are dynamically configured
      */
@@ -59,13 +59,13 @@ public class JPF implements Runnable {
       if ("listener".equals(key)) {
         if (oldValue == null)
           oldValue = "";
-        
+
         String[] nv = config.asStringArray(newValue);
         String[] ov = config.asStringArray(oldValue);
         String[] newListeners = Misc.getAddedElements(ov, nv);
         Class<?>[] argTypes = { Config.class, JPF.class };          // Many listeners have 2 parameter constructors
         Object[] args = {config, JPF.this };
-        
+
         if (newListeners != null) {
           for (String clsName : newListeners) {
             try {
@@ -80,7 +80,7 @@ public class JPF implements Runnable {
         }
       }
     }
-    
+
     /**
      * clean up to avoid a sublte but serious memory leak when using the
      * same config for multiple JPF objects/runs - this listener is an inner
@@ -91,10 +91,10 @@ public class JPF implements Runnable {
       config.removeChangeListener(this);
     }
   }
-  
+
   /** this is the backbone of all JPF configuration */
   Config config;
-  
+
   /** The search policy used to explore the state space */
   Search search;
 
@@ -110,10 +110,10 @@ public class JPF implements Runnable {
   List<VMListener> pendingVMListeners;
   List<SearchListener> pendingSearchListeners;
 
-  
+
   /** we use this as safety margin, to be released upon OutOfMemoryErrors */
   byte[] memoryReserve;
-  
+
   private static Logger initLogging(Config conf) {
     LogManager.init(conf);
     return getLogger("gov.nasa.jpf");
@@ -138,7 +138,7 @@ public class JPF implements Runnable {
       RunJPF.addProject(args);
       return;
     }
-    
+
     if (RunJPF.isOptionEnabled( RunJPF.BUILD_INFO,options)){
       RunJPF.showBuild(RunJPF.class.getClassLoader());
     }
@@ -221,7 +221,7 @@ public class JPF implements Runnable {
     }
   }
 
-  
+
   static void setNativeClassPath(Config config) {
     if (!config.hasSetClassLoader()) {
       config.initClassLoader( JPF.class.getClassLoader());
@@ -257,13 +257,13 @@ public class JPF implements Runnable {
   public JPF (String ... args) {
     this( createConfig(args));
   }
-  
+
   private void initialize() {
     VERSION = config.getString("jpf.version", VERSION);
     memoryReserve = new byte[config.getInt("jpf.memory_reserve", 64 * 1024)]; // in bytes
-    
+
     try {
-      
+
       Class<?>[] vmArgTypes = { JPF.class, Config.class };
       Object[] vmArgs = { this, config };
       vm = config.getEssentialInstance("vm.class", VM.class, vmArgTypes, vmArgs);
@@ -282,23 +282,23 @@ public class JPF implements Runnable {
       if (reporter != null){
         search.setReporter(reporter);
       }
-      
+
       addListeners();
-      
+
       config.addChangeListener(new ConfigListener());
-      
+
     } catch (JPFConfigException cx) {
       logger.severe(cx.toString());
-      //cx.getCause().printStackTrace();      
+      //cx.getCause().printStackTrace();
       throw new ExitException(false, cx);
     }
-  }  
+  }
 
-  
+
   public Status getStatus() {
     return status;
   }
-  
+
   public boolean isRunnable () {
     return ((vm != null) && (search != null));
   }
@@ -325,29 +325,29 @@ public class JPF implements Runnable {
     }
     pendingVMListeners.add(l);
   }
-  
+
   protected void addPendingSearchListener (SearchListener l){
     if (pendingSearchListeners == null){
       pendingSearchListeners = new ArrayList<SearchListener>();
     }
     pendingSearchListeners.add(l);
   }
-  
-  public void addListener (JPFListener l) {    
+
+  public void addListener (JPFListener l) {
     // the VM is instantiated first
     if (l instanceof VMListener) {
       if (vm != null) {
         vm.addListener( (VMListener) l);
-        
+
       } else { // no VM yet, we are in VM initialization
         addPendingVMListener((VMListener)l);
       }
     }
-    
+
     if (l instanceof SearchListener) {
       if (search != null) {
         search.addListener( (SearchListener) l);
-        
+
       } else { // no search yet, we are in Search initialization
         addPendingSearchListener((SearchListener)l);
       }
@@ -361,21 +361,21 @@ public class JPF implements Runnable {
         return listener;
       }
     }
-    
+
     if (vm != null){
       T listener = vm.getNextListenerOfType(type, null);
       if (listener != null){
         return listener;
       }
     }
-    
+
     return null;
   }
-  
+
   public boolean addUniqueTypeListener (JPFListener l) {
     boolean addedListener = false;
     Class<?> cls = l.getClass();
-    
+
     if (l instanceof VMListener) {
       if (vm != null) {
         if (!vm.hasListenerOfType(cls)) {
@@ -395,8 +395,8 @@ public class JPF implements Runnable {
 
     return addedListener;
   }
-  
-  
+
+
   public void removeListener (JPFListener l){
     if (l instanceof VMListener) {
       if (vm != null) {
@@ -421,7 +421,7 @@ public class JPF implements Runnable {
       search.addProperty(p);
     }
   }
-    
+
   /**
    * this is called after vm, search and reporter got instantiated
    */
@@ -433,17 +433,17 @@ public class JPF implements Runnable {
     if (pendingVMListeners != null){
       for (VMListener l : pendingVMListeners) {
        vm.addListener(l);
-      }      
+      }
       pendingVMListeners = null;
     }
-    
+
     if (pendingSearchListeners != null){
       for (SearchListener l : pendingSearchListeners) {
        search.addListener(l);
       }
       pendingSearchListeners = null;
     }
-    
+
     // and finally everything that's user configured
     List<JPFListener> listeners = config.getInstances("listener", JPFListener.class, argTypes, args);
     if (listeners != null) {
@@ -559,7 +559,7 @@ public class JPF implements Runnable {
         }
       }
     }
-    
+
     return s;
   }
 
@@ -583,7 +583,7 @@ public class JPF implements Runnable {
         return lastArg;
       }
     }
-    
+
     return getArg(args, "-c(onfig)?(=.+)?", "jpf.properties", true);
   }
 
@@ -595,7 +595,7 @@ public class JPF implements Runnable {
   public static Config createConfig (String[] args) {
     return new Config(args);
   }
-  
+
   /**
    * runs the verification.
    */
@@ -613,7 +613,7 @@ public class JPF implements Runnable {
           search.search();
         }
       } catch (OutOfMemoryError oom) {
-        
+
         // try to get memory back before we do anything that makes it worse
         // (note that we even try to avoid calls here, we are on thin ice)
 
@@ -624,7 +624,7 @@ public class JPF implements Runnable {
         memoryReserve = null; // release something
         long m0 = rt.freeMemory();
         long d = 10000;
-        
+
         // see if we can reclaim some memory before logging or printing statistics
         for (int i=0; i<10; i++) {
           rt.gc();
@@ -634,7 +634,7 @@ public class JPF implements Runnable {
           }
           m0 = m1;
         }
-        
+
         logger.severe("JPF out of memory");
 
         // that's questionable, but we might want to see statistics / coverage
@@ -647,24 +647,24 @@ public class JPF implements Runnable {
         } catch (Throwable t){
           throw new JPFListenerException("exception during out-of-memory termination", t);
         }
-        
+
       // NOTE - this is not an exception firewall anymore
 
       } finally {
         status = Status.DONE;
 
         config.jpfRunTerminated();
-        cleanUp();        
+        cleanUp();
       }
     }
   }
-  
+
   protected void cleanUp(){
     search.cleanUp();
     vm.cleanUp();
     reporter.cleanUp();
   }
-  
+
   public List<Error> getSearchErrors () {
     if (search != null) {
       return search.getErrors();
@@ -680,8 +680,8 @@ public class JPF implements Runnable {
 
     return null;
   }
-  
-  
+
+
   // some minimal sanity checks
   static boolean checkArgs (String[] args){
     String lastArg = args[args.length-1];
@@ -711,19 +711,19 @@ public class JPF implements Runnable {
   @SuppressWarnings("serial")
   public static class ExitException extends RuntimeException {
     boolean report = true;
-    
+
     ExitException() {}
-    
+
     ExitException (boolean report, Throwable cause){
       super(cause);
-      
+
       this.report = report;
     }
-    
+
     ExitException(String msg) {
       super(msg);
     }
-    
+
     public boolean shouldReport() {
       return report;
     }

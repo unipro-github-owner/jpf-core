@@ -169,7 +169,6 @@ public class ThreadInfo extends InfoObject
   protected int id;
   
   protected int objRef; // the java.lang.Thread object reference
-  protected ClassInfo ci; // the classinfo associated with the thread object
   protected int targetRef; // the associated java.lang.Runnable
   
   // which attributes are stored/restored
@@ -378,8 +377,7 @@ public class ThreadInfo extends InfoObject
     init(vm);
     // we don't have the group yet, no Runnable or parent, and the name is fixed
     // the thread is also not yet in the ThreadList
-    
-    ci = appCtx.getSystemClassLoader().getThreadClassInfo();
+
     targetRef = MJIEnv.NULL;
     threadData.name = MAIN_NAME;
   }
@@ -396,8 +394,7 @@ public class ThreadInfo extends InfoObject
     
     ElementInfo ei = vm.getModifiableElementInfo(objRef);  
     ei.setExposed(parent, null);        // all explicitly creatd threads are per se exposed
-    
-    this.ci = ei.getClassInfo();    
+
     this.objRef = objRef;
     this.targetRef = runnableRef;
    
@@ -848,12 +845,12 @@ public class ThreadInfo extends InfoObject
   public void setBlockedInAtomicSection (){
     vm.getSystemState().setBlockedInAtomicSection();
   }
-  
+/*
   MethodInfo getExitMethod() {
     MethodInfo mi = getClassInfo().getMethod("exit()V", true);
     return mi;
   }
-
+*/
   public boolean isBlockedOrNotified() {
     State state = threadData.state;
     return (state == State.BLOCKED) || (state == State.NOTIFIED);
@@ -1053,13 +1050,6 @@ public class ThreadInfo extends InfoObject
   
   public SystemClassLoaderInfo getSystemClassLoaderInfo(){
     return appCtx.sysCl;
-  }
-  
-  /**
-   * Returns the class information.
-   */
-  public ClassInfo getClassInfo () {
-    return ci;
   }
 
   public MJIEnv getEnv() {

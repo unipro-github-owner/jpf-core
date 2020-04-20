@@ -321,6 +321,7 @@ public final class IntTable<E> implements Iterable<IntTable.Entry<E>>, Cloneable
         } else {
           last.next = newEntry;
         }
+        break;
       }
     }    
   }

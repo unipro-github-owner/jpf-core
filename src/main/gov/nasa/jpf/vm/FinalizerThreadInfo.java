@@ -60,6 +60,8 @@ public class FinalizerThreadInfo extends ThreadInfo {
   static final String FINALIZER_NAME = "finalizer";
   
   ChoiceGenerator<?> replacedCG;
+
+  protected ClassInfo ci; // the classinfo associated with the thread object
   
   protected FinalizerThreadInfo (VM vm, ApplicationContext appCtx, int id) {
     super(vm, id, appCtx);
@@ -250,5 +252,12 @@ public class FinalizerThreadInfo extends ThreadInfo {
   @Override
   public boolean isSystemThread() {
     return true;
+  }
+
+  /**
+   * Returns the class information.
+   */
+  public ClassInfo getClassInfo () {
+    return ci;
   }
 }

@@ -17,66 +17,68 @@
  */
 package gov.nasa.jpf.vm.choice;
 
-import gov.nasa.jpf.vm.ChoiceGeneratorBase;
-import gov.nasa.jpf.vm.ThreadChoiceGenerator;
-import gov.nasa.jpf.vm.ThreadInfo;
+import gov.nasa.jpf.Config;
+import gov.nasa.jpf.util.ObjectList;
+import gov.nasa.jpf.vm.*;
 
 import java.io.PrintWriter;
+import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.Random;
 
-public class ThreadChoiceFromSet extends ChoiceGeneratorBase<ThreadInfo> implements ThreadChoiceGenerator {
+public class ThreadChoiceFromSet extends ChoiceGeneratorLight<ThreadInfo> implements ThreadChoiceGenerator {
 
   protected boolean isSchedulingPoint;
   protected ThreadInfo[] values;
   protected int count;
-    
-  protected ThreadChoiceFromSet (String id){
-    super(id);
-    
+
+  protected ThreadChoiceFromSet(String id) {
+    //this.id = id;
+
     // all other fields have to be computed by subclass ctor
     count = -1;
   }
-  
-  public ThreadChoiceFromSet (String id, ThreadInfo[] set, boolean isSchedulingPoint) {
-    super(id);
-        
+
+  public ThreadChoiceFromSet(String id, ThreadInfo[] set, boolean isSchedulingPoint) {
+    //this.id = id;
+
     values = set;
     count = -1;
 
     this.isSchedulingPoint = isSchedulingPoint;
 
     /**
-    if (isSchedulingPoint){
-      // do a sanity check to see if the candidates are acutally runnable
-      for (int i = 0; i < set.length; i++) {
-        if (!set[i].isTimeoutRunnable()) {
-          throw new JPFException("trying to schedule non-runnable: " + set[i]);
-        }
-      }
-    }
-    **/
+     if (isSchedulingPoint){
+     // do a sanity check to see if the candidates are acutally runnable
+     for (int i = 0; i < set.length; i++) {
+     if (!set[i].isTimeoutRunnable()) {
+     throw new JPFException("trying to schedule non-runnable: " + set[i]);
+     }
+     }
+     }
+     **/
   }
-  
+
   @Override
-  public ThreadInfo getChoice (int idx){
-    if (idx >= 0 && idx < values.length){
+  public ThreadInfo getChoice(int idx) {
+    if (idx >= 0 && idx < values.length) {
       return values[idx];
     } else {
       throw new IllegalArgumentException("choice index out of range: " + idx);
     }
   }
 
-  
+
   @Override
-  public void reset () {
+  public void reset() {
     count = -1;
 
     isDone = false;
   }
-  
+
   @Override
-  public ThreadInfo getNextChoice () {
+  public ThreadInfo getNextChoice() {
     if ((count >= 0) && (count < values.length)) {
       return values[count];
     } else {
@@ -87,8 +89,8 @@ public class ThreadChoiceFromSet extends ChoiceGeneratorBase<ThreadInfo> impleme
   }
 
   @Override
-  public boolean hasMoreChoices () {
-    return (!isDone && (count < values.length-1));
+  public boolean hasMoreChoices() {
+    return (!isDone && (count < values.length - 1));
   }
 
 
@@ -101,55 +103,55 @@ public class ThreadChoiceFromSet extends ChoiceGeneratorBase<ThreadInfo> impleme
    * other ThreadChoiceGenerators, and we should handle this consistently
    */
   @Override
-  public void advance () {    
-    if (count < values.length-1) { // at least one choice left
+  public void advance() {
+    if (count < values.length - 1) { // at least one choice left
       count++;
     }
   }
 
   @Override
-  public int getTotalNumberOfChoices () {
+  public int getTotalNumberOfChoices() {
     return values.length;
   }
 
   @Override
-  public int getProcessedNumberOfChoices () {
-    return count+1;
+  public int getProcessedNumberOfChoices() {
+    return count + 1;
   }
 
-  public Object getNextChoiceObject () {
+  public Object getNextChoiceObject() {
     return getNextChoice();
   }
-  
-  public ThreadInfo[] getChoices(){
+
+  public ThreadInfo[] getChoices() {
     return values;
   }
-  
+
   @Override
-  public boolean supportsReordering(){
+  public boolean supportsReordering() {
     return true;
   }
-  
+
   @Override
-  public ThreadChoiceGenerator reorder (Comparator<ThreadInfo> comparator){
+  public ThreadChoiceGenerator reorder(Comparator<ThreadInfo> comparator) {
     ThreadInfo[] newValues = values.clone();
     Arrays.sort(newValues, comparator);
-    
-    return new ThreadChoiceFromSet( id, newValues, isSchedulingPoint);
+
+    return new ThreadChoiceFromSet("id", newValues, isSchedulingPoint);
   }
-  
+
   @Override
-  public void printOn (PrintWriter pw) {
+  public void printOn(PrintWriter pw) {
     pw.print(getClass().getName());
     pw.append("[id=\"");
-    pw.append(id);
+    pw.append("id");
     pw.append('"');
 
     pw.append(",isCascaded:");
     pw.append(Boolean.toString(isCascaded));
 
     pw.print(",{");
-    for (int i=0; i<values.length; i++) {
+    for (int i = 0; i < values.length; i++) {
       if (i > 0) pw.print(',');
       if (i == count) {
         pw.print(MARKER);
@@ -158,9 +160,9 @@ public class ThreadChoiceFromSet extends ChoiceGeneratorBase<ThreadInfo> impleme
     }
     pw.print("}]");
   }
-  
+
   @Override
-  public ThreadChoiceFromSet randomize () {
+  public ThreadChoiceFromSet randomize() {
     for (int i = values.length - 1; i > 0; i--) {
       int j = random.nextInt(i + 1);
       ThreadInfo tmp = values[i];
@@ -169,15 +171,15 @@ public class ThreadChoiceFromSet extends ChoiceGeneratorBase<ThreadInfo> impleme
     }
     return this;
   }
-  
+
   public ThreadInfo[] getAllThreadChoices() {
-	  return values; 
+    return values;
   }
-  
+
   @Override
-  public boolean contains (ThreadInfo ti){
-    for (int i=0; i<values.length; i++){
-      if (values[i] == ti){
+  public boolean contains(ThreadInfo ti) {
+    for (int i = 0; i < values.length; i++) {
+      if (values[i] == ti) {
         return true;
       }
     }
@@ -188,7 +190,7 @@ public class ThreadChoiceFromSet extends ChoiceGeneratorBase<ThreadInfo> impleme
   public Class<ThreadInfo> getChoiceType() {
     return ThreadInfo.class;
   }
-  
+
   @Override
   public boolean isSchedulingPoint() {
     return isSchedulingPoint;
