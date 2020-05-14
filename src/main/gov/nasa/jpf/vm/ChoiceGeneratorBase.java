@@ -6,23 +6,23 @@
  * The Java Pathfinder core (jpf-core) platform is licensed under the
  * Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
- * 
- *        http://www.apache.org/licenses/LICENSE-2.0. 
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0.
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and 
+ * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package gov.nasa.jpf.vm;
 
-import gov.nasa.jpf.Config;
-import gov.nasa.jpf.util.ObjectList;
-
 import java.lang.reflect.Array;
 import java.util.Comparator;
 import java.util.Random;
+
+import gov.nasa.jpf.Config;
+import gov.nasa.jpf.util.ObjectList;
 
 /**
  * abstract root class for configurable choice generators
@@ -33,29 +33,29 @@ public abstract class ChoiceGeneratorBase<T> implements ChoiceGenerator<T> {
    * choice randomization policies, which can be set from JPF configuration
    */
   static enum ChoiceRandomizationPolicy {
-    VAR_SEED,    // randomize choices using a different seed for every JPF run 
+    VAR_SEED,    // randomize choices using a different seed for every JPF run
     FIXED_SEED,  // randomize choices using a fixed seed for each JPF run (reproducible, seed can be specified as cg.seed)
     NONE         // don't randomize choices
   };
-  
+
   static ChoiceRandomizationPolicy randomization;
-  
+
   // the marker for the current choice used in String conversion
   public static final char MARKER = '>';
   protected static Random random = new Random(42);
-  
-  
+
+
   // want the id to be visible to subclasses outside package
   protected String id;
-  
+
   // for subsequent access, there is no need to translate a JPF String object reference
   // into a host VM String anymore (we just need it for creation to look up
   // the class if this is a named CG)
   protected int idRef;
-  
+
   // used to cut off further choice enumeration
   protected boolean isDone;
-  
+
   // we keep a linked list of CG's
   protected ChoiceGenerator<?> prev;
 
@@ -64,7 +64,7 @@ public abstract class ChoiceGeneratorBase<T> implements ChoiceGenerator<T> {
 
   // the state id of the state in which the CG was created
   protected int stateId;
-  
+
   // and the thread that executed this insn
   protected ThreadInfo ti;
 
@@ -78,11 +78,11 @@ public abstract class ChoiceGeneratorBase<T> implements ChoiceGenerator<T> {
   // in case this is initialized from a VM context
   public static void init(Config config) {
 
-    randomization = config.getEnum("cg.randomize_choices", 
+    randomization = config.getEnum("cg.randomize_choices",
                                    ChoiceRandomizationPolicy.values(), ChoiceRandomizationPolicy.NONE);
 
-    // if the randomize_choices is set to random then we need to 
-    // pick the seed based on the system time. 
+    // if the randomize_choices is set to random then we need to
+    // pick the seed based on the system time.
 
     if (randomization == ChoiceRandomizationPolicy.VAR_SEED) {
       random.setSeed(System.currentTimeMillis());
@@ -91,7 +91,7 @@ public abstract class ChoiceGeneratorBase<T> implements ChoiceGenerator<T> {
       random.setSeed( seed);
     }
   }
-  
+
   public static boolean useRandomization() {
     return (randomization != ChoiceRandomizationPolicy.NONE);
   }
@@ -123,7 +123,7 @@ public abstract class ChoiceGeneratorBase<T> implements ChoiceGenerator<T> {
     }
     return clone;
   }
-  
+
   @Override
   public String getId() {
     return id;
@@ -175,7 +175,7 @@ public abstract class ChoiceGeneratorBase<T> implements ChoiceGenerator<T> {
     ti = tiCreator;
     insn = tiCreator.getPC();
   }
-  
+
   @Override
   public void setStateId(int stateId){
     this.stateId = stateId;
@@ -184,7 +184,7 @@ public abstract class ChoiceGeneratorBase<T> implements ChoiceGenerator<T> {
       getCascadedParent().setStateId(stateId);
     }
   }
-  
+
   @Override
   public int getStateId(){
     return stateId;
@@ -199,12 +199,12 @@ public abstract class ChoiceGeneratorBase<T> implements ChoiceGenerator<T> {
   public boolean supportsReordering(){
     return false;
   }
-  
+
   /**
    * reorder according to a user provided comparator
-   * @returns instance to reordered CG of same choice type, 
+   * @returns instance to reordered CG of same choice type,
    * null if not supported by particular CG subclass
-   * 
+   *
    * Note: this should only be called before the first advance, since it
    * can reset the CG enumeration status
    */
@@ -212,7 +212,7 @@ public abstract class ChoiceGeneratorBase<T> implements ChoiceGenerator<T> {
   public ChoiceGenerator<T> reorder (Comparator<T> comparator){
     return null;
   }
-  
+
   @Override
   public void setPreviousChoiceGenerator(ChoiceGenerator<?> cg) {
     prev = cg;
@@ -324,13 +324,13 @@ public abstract class ChoiceGeneratorBase<T> implements ChoiceGenerator<T> {
     }
     return n;
   }
-  
+
   @Override
   public void setCurrent(){
     // nothing, can be overridden by subclasses to do context specific initialization
     // the first time this CG becomes the current one
   }
-  
+
   // we can't put the advanceForCurrentInsn() here because it has to do
   // notifications, which are the SystemState responsibility
   /**
@@ -353,7 +353,7 @@ public abstract class ChoiceGeneratorBase<T> implements ChoiceGenerator<T> {
   }
 
   // override this to support explicit CG enumeration from listeners etc.
-  
+
   /**
    * explicit choice enumeration. Override if supported
    * @return choice value or null if not supported
@@ -362,10 +362,10 @@ public abstract class ChoiceGeneratorBase<T> implements ChoiceGenerator<T> {
   public T getChoice (int idx){
     return null;
   }
-  
+
   //--- generic choice set getter implementation
   // Note - this requires an overloaded getChoice() and can be very slow (depending on CG implementation)
-  
+
   @Override
   public T[] getAllChoices(){
     int n = getTotalNumberOfChoices();
@@ -380,7 +380,7 @@ public abstract class ChoiceGeneratorBase<T> implements ChoiceGenerator<T> {
     }
     return a;
   }
-  
+
   @Override
   public T[] getProcessedChoices(){
     int n = getProcessedNumberOfChoices();
@@ -393,9 +393,9 @@ public abstract class ChoiceGeneratorBase<T> implements ChoiceGenerator<T> {
         a[i] = c;
       }
     }
-    return a;    
+    return a;
   }
-  
+
   @Override
   public T[] getUnprocessedChoices(){
     int n = getTotalNumberOfChoices();
@@ -409,10 +409,10 @@ public abstract class ChoiceGeneratorBase<T> implements ChoiceGenerator<T> {
         a[i] = c;
       }
     }
-    return a;    
+    return a;
   }
-  
-  
+
+
   @Override
   public boolean isDone() {
     return isDone;
@@ -442,7 +442,7 @@ public abstract class ChoiceGeneratorBase<T> implements ChoiceGenerator<T> {
   public boolean hasAttrValue (Object a){
     return ObjectList.contains(attr, a);
   }
-  
+
   /**
    * this returns all of them - use either if you know there will be only
    * one attribute at a time, or check/process result with ObjectList
@@ -453,7 +453,7 @@ public abstract class ChoiceGeneratorBase<T> implements ChoiceGenerator<T> {
   }
 
   /**
-   * this replaces all of them - use only if you know 
+   * this replaces all of them - use only if you know
    *  - there will be only one attribute at a time
    *  - you obtained the value you set by a previous getXAttr()
    *  - you constructed a multi value list with ObjectList.createList()
@@ -549,8 +549,8 @@ public abstract class ChoiceGeneratorBase<T> implements ChoiceGenerator<T> {
     //SEEMS TO BE UNUSED private String id;
     boolean isDone;
     CgStorage<?> prev;
-    Instruction insn; // FIXME TODO should be serialized
-    Object attr; // FIXME TODO should be investigated
+    long nonSerialInsnId; // FIXME TODO Instruction insn; // FIXME TODO should be serialized
+    long nonSerialAttrId; //Object attr; // FIXME TODO should be investigated
     boolean isCascaded;
 
     @Override
@@ -558,8 +558,8 @@ public abstract class ChoiceGeneratorBase<T> implements ChoiceGenerator<T> {
       ChoiceGeneratorBase<T> cg = (ChoiceGeneratorBase<T>)getObject();
       cg.isDone = isDone;
       cg.prev = prev == null ? null : prev.restore();
-      cg.insn = insn;
-      cg.attr = attr;
+      cg.insn = (Instruction)VM.NON_SERIAL_STORAGE.remove(nonSerialInsnId);
+      cg.attr = VM.NON_SERIAL_STORAGE.remove(nonSerialAttrId);
       cg.isCascaded = isCascaded;
       return cg;
     }
@@ -577,8 +577,14 @@ public abstract class ChoiceGeneratorBase<T> implements ChoiceGenerator<T> {
     //SEEMS TO BE UNUSED storage.id = id;
     storage.isDone = isDone;
     storage.prev = prev == null ? null : prev.store();
-    storage.insn = insn;
-    storage.attr = attr;
+    storage.nonSerialInsnId = VM.NON_SERIAL_ID.getAndIncrement();
+    VM.NON_SERIAL_STORAGE.put(storage.nonSerialInsnId, insn);
+    if (attr != null) {
+      storage.nonSerialAttrId = VM.NON_SERIAL_ID.getAndIncrement();
+      VM.NON_SERIAL_STORAGE.put(storage.nonSerialAttrId, attr);
+    } else {
+      storage.nonSerialAttrId = VM.NON_SERIAL_NULL_ID;
+    }
     storage.isCascaded = isCascaded;
     return storage;
   }

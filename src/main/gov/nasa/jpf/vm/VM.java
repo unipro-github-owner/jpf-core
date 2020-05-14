@@ -6,13 +6,13 @@
  * The Java Pathfinder core (jpf-core) platform is licensed under the
  * Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
- * 
- *        http://www.apache.org/licenses/LICENSE-2.0. 
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0.
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and 
+ * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package gov.nasa.jpf.vm;
@@ -21,9 +21,11 @@ import java.io.PrintWriter;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 import gov.nasa.jpf.Config;
 import gov.nasa.jpf.JPF;
@@ -43,6 +45,9 @@ import gov.nasa.jpf.util.Predicate;
  * move backward and forward one transition at a time.
  */
 public abstract class VM {
+  public static long NON_SERIAL_NULL_ID = Long.MIN_VALUE;
+  public static AtomicLong NON_SERIAL_ID = new AtomicLong();
+  public static Map<Long, Object> NON_SERIAL_STORAGE = new HashMap<>();
 
   /**
    * this is a debugging aid to control compilation of expensive consistency checks
@@ -50,9 +55,9 @@ public abstract class VM {
    * unconditional assertions for mandatory consistency checks)
    */
   public static final boolean CHECK_CONSISTENCY = false;
-  
+
   protected static final String[] EMPTY_ARGS = new String[0];
-  
+
   protected static JPFLogger log = JPF.getLogger("vm");
 
   /**
@@ -77,7 +82,7 @@ public abstract class VM {
   }
 
   protected SystemState ss;
-  
+
   protected FunctionObjectFactory funcObjFactory = new FunctionObjectFactory();
 
   // <2do> - if you are confused about the various pieces of state and its
@@ -127,11 +132,11 @@ public abstract class VM {
 
   /** how we model execution time */
   protected TimeModel timeModel;
-  
+
   /** ThreadChoiceGenerator management related to data races and shared objects */
   protected Scheduler scheduler;
-  
-  
+
+
   protected Config config; // that's for the options we use only once
 
   // VM options we use frequently
@@ -140,7 +145,7 @@ public abstract class VM {
   protected boolean pathOutput;
   protected boolean indentOutput;
   protected boolean processFinalizers;
-  
+
   // <2do> there are probably many places where this should be used
   protected boolean isBigEndian;
 
@@ -157,7 +162,7 @@ public abstract class VM {
   // we want a (internal) mechanism that is on-demand only, i.e. processed
   // actions are removed from the list
   protected ArrayList<Runnable> postGcActions = new ArrayList<Runnable>();
-  
+
   /**
    * be prepared this might throw JPFConfigExceptions
    */
@@ -177,15 +182,15 @@ public abstract class VM {
     indentOutput = config.getBoolean("vm.indent_output",false);
 
     processFinalizers = config.getBoolean("vm.process_finalizers", false);
-    
+
     isBigEndian = getPlatformEndianness(config);
     initialized = false;
-    
+
     initTimeModel(config);
 
     initSubsystems(config);
     initFields(config);
-    
+
     // set predicates used to query from threadlist
     userliveNonDaemonPredicate = new Predicate<ThreadInfo>() {
       @Override
@@ -200,14 +205,14 @@ public abstract class VM {
         return (ti.isTimeoutRunnable());
       }
     };
-    
+
     userTimedoutRunnablePredicate = new Predicate<ThreadInfo>() {
       @Override
 	public boolean isTrue (ThreadInfo ti) {
         return (ti.isTimeoutRunnable() && !ti.isSystemThread());
       }
     };
-    
+
     alivePredicate = new Predicate<ThreadInfo>() {
       @Override
 	public boolean isTrue (ThreadInfo ti) {
@@ -238,7 +243,7 @@ public abstract class VM {
     backtracker.attach(this);
 
     scheduler = config.getEssentialInstance("vm.scheduler.class", Scheduler.class);
-    
+
     newStateId = -1;
   }
 
@@ -250,7 +255,7 @@ public abstract class VM {
     MethodInfo.init(config);
     NativePeer.init(config);
     ChoiceGeneratorBase.init(config);
-    
+
     // peer classes get initialized upon NativePeer creation
   }
 
@@ -259,14 +264,14 @@ public abstract class VM {
     Object[] args = { this, config };
     timeModel = config.getEssentialInstance("vm.time.class", TimeModel.class, argTypes, args);
   }
-  
+
   /**
    * called after the JPF run is finished. Shouldn't be public, but is called by JPF
    */
   public void cleanUp(){
     // nothing yet
   }
-  
+
   protected boolean getPlatformEndianness (Config config){
     String endianness = config.getString("vm.endian");
     if (endianness == null) {
@@ -280,7 +285,7 @@ public abstract class VM {
       return false; // doesn't matter
     }
   }
-  
+
   public boolean isBigEndianPlatform(){
     return isBigEndian;
   }
@@ -288,11 +293,11 @@ public abstract class VM {
   public boolean finalizersEnabled() {
     return processFinalizers;
   }
-  
+
   public boolean isInitialized() {
     return initialized;
   }
-  
+
   public boolean isSingleProcess() {
     return true;
   }
@@ -332,10 +337,10 @@ public abstract class VM {
     ThreadInfo tiMain = new ThreadInfo( this, id, appCtx);
     ThreadInfo.currentThread = tiMain; // we still need this for listeners that process startup class loading events
     registerThread(tiMain);
-    
+
     return tiMain;
   }
-  
+
   protected ThreadInfo createThreadInfo (int objRef, int groupRef, int runnableRef, int nameRef){
     ThreadInfo tiCurrent = ThreadInfo.getCurrentThread();
     ThreadInfo tiNew = new ThreadInfo( this, objRef, groupRef, runnableRef, nameRef, tiCurrent);
@@ -344,7 +349,7 @@ public abstract class VM {
     // to lookup the ThreadInfo. This is a bit premature since the thread is not runnable yet,
     // but chances are it will be started soon, so we don't waste another data structure to do the mapping
     registerThread( tiNew);
-    
+
     return tiNew;
   }
 
@@ -352,10 +357,10 @@ public abstract class VM {
   protected ThreadInfo createFinalizerThreadInfo (int id, ApplicationContext appCtx){
     FinalizerThreadInfo finalizerTi = new FinalizerThreadInfo( this, appCtx, id);
     registerThread(finalizerTi);
-    
+
     return finalizerTi;
   }
-  
+
   /**
    * the minimal set of system classes we need for initialization
    */
@@ -417,7 +422,7 @@ public abstract class VM {
     // to specify extra classes, but this could be VERY expensive. Projected use
     // is mostly to avoid static init of single classes during the search
     String[] extraStartupClasses = config.getStringArray("vm.extra_startup_classes");
-    if (extraStartupClasses != null) {      
+    if (extraStartupClasses != null) {
       for (String extraCls : extraStartupClasses) {
         startupClasses.add(extraCls);
       }
@@ -430,15 +435,15 @@ public abstract class VM {
 
   /**
    * return a list of ClassInfos for essential system types
-   * 
+   *
    * If system classes are not found, or are not valid JPF model classes, we throw
    * a JPFConfigException and exit
-   * 
+   *
    * returned ClassInfos are not yet registered in Statics and don't have class objects
    */
   protected List<ClassInfo> getStartupSystemClassInfos (SystemClassLoaderInfo sysCl, ThreadInfo tiMain){
     LinkedList<ClassInfo> list = new LinkedList<ClassInfo>();
-    
+
     try {
       for (String clsName : getStartupSystemClassNames()) {
         ClassInfo ci = sysCl.getResolvedClassInfo(clsName);
@@ -447,37 +452,37 @@ public abstract class VM {
     } catch (ClassInfoException e){
       e.printStackTrace();
       throw new JPFConfigException("cannot load system class " + e.getFailedClass());
-    } 
-    
+    }
+
     return list;
   }
-  
+
   /**
-   * this adds the application main class and its supers to the list of startup classes 
+   * this adds the application main class and its supers to the list of startup classes
    */
   protected ClassInfo getMainClassInfo (SystemClassLoaderInfo sysCl, String mainClassName, ThreadInfo tiMain, List<ClassInfo> list){
     try {
       ClassInfo ciMain = sysCl.getResolvedClassInfo(mainClassName);
       ciMain.registerStartupClass(tiMain, list); // this might add a couple more
-      
+
       return ciMain;
-      
+
     } catch (ClassInfoException e){
       throw new JPFConfigException("cannot load application class " + e.getFailedClass());
     }
   }
-  
+
   /*
-   * these are called when creating ApplicationContexts and can be overridden by concrete VM types 
+   * these are called when creating ApplicationContexts and can be overridden by concrete VM types
    */
   protected SystemClassLoaderInfo createSystemClassLoaderInfo (int appId) {
     Class<?>[] argTypes = { VM.class, int.class };
-   
+
     Object[] args = { this, Integer.valueOf(appId)};
     SystemClassLoaderInfo sysCli = config.getEssentialInstance("vm.classloader.class", SystemClassLoaderInfo.class, argTypes, args);
     return sysCli;
   }
-  
+
   protected void createSystemClassLoaderObject (SystemClassLoaderInfo sysCl, ThreadInfo tiMain) {
     Heap heap = getHeap();
 
@@ -489,12 +494,12 @@ public abstract class VM {
     heap.registerPinDown(ei.getObjectRef());
 
     sysCl.setClassLoaderObject(ei);
-  }  
-  
+  }
+
   protected void pushMainEntryArgs (MethodInfo miMain, String[] args, ThreadInfo tiMain, DirectCallStackFrame frame){
     String sig = miMain.getSignature();
     Heap heap = getHeap();
-    
+
     if (sig.contains("([Ljava/lang/String;)")){
       ElementInfo eiArgs = heap.newArray("Ljava/lang/String;", args.length, tiMain);
       for (int i = 0; i < args.length; i++) {
@@ -510,15 +515,15 @@ public abstract class VM {
       } else {
         frame.setReferenceArgument( 0, MJIEnv.NULL, null);
       }
-      
+
     } else if (!sig.contains("()")){
       throw new JPFException("unsupported main entry signature: " + miMain.getFullName());
     }
   }
-  
+
   protected void pushMainEntry (MethodInfo miMain, String[] args, ThreadInfo tiMain) {
     DirectCallStackFrame frame = miMain.createDirectCallStackFrame(tiMain, 0);
-    pushMainEntryArgs( miMain, args, tiMain, frame);    
+    pushMainEntryArgs( miMain, args, tiMain, frame);
     tiMain.pushFrame(frame);
   }
 
@@ -529,10 +534,10 @@ public abstract class VM {
     if (miMain == null || !miMain.isStatic()) {
       throw new JPFConfigException("no static entry method: " + ciMain.getName() + '.' + mthName);
     }
-    
+
     return miMain;
   }
-  
+
   protected void pushClinits (List<ClassInfo> startupClasses, ThreadInfo tiMain) {
     for (ClassInfo ci : startupClasses){
       MethodInfo mi = ci.getMethod("<clinit>()V", false);
@@ -541,16 +546,16 @@ public abstract class VM {
         tiMain.pushFrame(frame);
       } else {
         ci.setInitialized();
-      }      
+      }
     }
   }
-  
+
   /**
    * this is the main initialization point that sets up startup objects threads and callstacks.
    * If this returns false VM initialization cannot proceed and JPF will terminate
    */
   public abstract boolean initialize ();
-  
+
   /**
    * create and initialize the main thread for the given ApplicationContext.
    * This is called from VM.initialize() implementations, the caller has to handle exceptions that should be reported
@@ -558,7 +563,7 @@ public abstract class VM {
    */
   protected ThreadInfo initializeMainThread (ApplicationContext appCtx, int tid){
     SystemClassLoaderInfo sysCl = appCtx.sysCl;
-    
+
     ThreadInfo tiMain = createMainThreadInfo(tid, appCtx);
     List<ClassInfo> startupClasses = getStartupSystemClassInfos(sysCl, tiMain);
     ClassInfo ciMain = getMainClassInfo(sysCl, appCtx.mainClassName, tiMain, startupClasses);
@@ -566,7 +571,7 @@ public abstract class VM {
     if (!checkSystemClassCompatibility( sysCl)){
       throw new JPFConfigException("non-JPF system classes, check classpath");
     }
-    
+
     // create essential objects (we can't call ctors yet)
     createSystemClassLoaderObject(sysCl, tiMain);
     for (ClassInfo ci : startupClasses) {
@@ -574,7 +579,7 @@ public abstract class VM {
     }
     tiMain.createMainThreadObject(sysCl);
     registerThread(tiMain);
-    
+
     // note that StackFrames have to be pushed in reverse order
     MethodInfo miMain = getMainEntryMethodInfo(appCtx.mainEntry, ciMain);
     appCtx.setEntryMethod(miMain);
@@ -586,35 +591,35 @@ public abstract class VM {
 
     return tiMain;
   }
-  
+
   protected void initializeFinalizerThread (ApplicationContext appCtx, int tid) {
     if(processFinalizers) {
       ApplicationContext app = getCurrentApplicationContext();
       FinalizerThreadInfo finalizerTi = app.getFinalizerThread();
-    
+
       finalizerTi = (FinalizerThreadInfo) createFinalizerThreadInfo(tid, app);
       finalizerTi.createFinalizerThreadObject(app.getSystemClassLoader());
-    
+
       appCtx.setFinalizerThread(finalizerTi);
     }
   }
-  
+
   protected void registerThreadListCleanup (ClassInfo ciThread){
     assert ciThread != null : "java.lang.Thread not loaded yet";
-    
+
     ciThread.addReleaseAction( new ReleaseAction(){
       @Override
 	public void release (ElementInfo ei) {
         ThreadList tl = getThreadList();
         int objRef = ei.getObjectRef();
         ThreadInfo ti = tl.getThreadInfoForObjRef(objRef);
-        if (tl.remove(ti)){        
-          vm.getKernelState().changed();    
+        if (tl.remove(ti)){
+          vm.getKernelState().changed();
         }
       }
     });
   }
-  
+
 
   /**
    * override this if the concrete VM needs a special root CG
@@ -622,7 +627,7 @@ public abstract class VM {
   protected void setRootCG(){
     scheduler.setRootCG();
   }
-  
+
   protected void initSystemState (ThreadInfo mainThread){
     ss.setStartThread(mainThread);
 
@@ -636,14 +641,14 @@ public abstract class VM {
     if (!hasNextChoiceGenerator()){
       throw new JPFException("scheduler failed to set ROOT choice generator: " + scheduler);
     }
-    
+
     transitionOccurred = true;
   }
-  
+
   public void addPostGcAction (Runnable r){
     postGcActions.add(r);
   }
-  
+
   /**
    * to be called from the Heap after GC is completed (i.e. only live objects remain)
    */
@@ -652,11 +657,11 @@ public abstract class VM {
       for (Runnable r : postGcActions){
         r.run();
       }
-      
+
       postGcActions.clear();
     }
   }
-  
+
   public void addListener (VMListener newListener) {
     log.info("VMListener added: ", newListener);
     listeners = Misc.appendElement(listeners, newListener);
@@ -669,7 +674,7 @@ public abstract class VM {
   public <T> T getNextListenerOfType(Class<T> type, T prev){
     return Misc.getNextElementOfType(listeners, type, prev);
   }
-  
+
   public void removeListener (VMListener removeListener) {
     listeners = Misc.removeElement(listeners, removeListener);
   }
@@ -706,16 +711,16 @@ public abstract class VM {
       return jpf.getReporter().hasToReportOutput(); // implicilty required
     }
   }
-  
+
   //--- VM listener notifications
-  
+
   /*
    * while some of these can be called from various places, the calls that happen from within Instruction.execute() should
    * happen right before return since listeners might do things such as ThreadInfo.createAndThrowException(..), i.e. cause
    * side effects that would violate consistency requirements of successive operations (e.g. by assuming we are still executing
    * in the same StackFrame - after throwing an exception)
    */
-  
+
   protected void notifyVMInitialized () {
     try {
       for (int i = 0; i < listeners.length; i++) {
@@ -727,9 +732,9 @@ public abstract class VM {
       throw x;
     } catch (Throwable t) {
       throw new JPFListenerException("exception during vmInitialized() notification", t);
-    }    
+    }
   }
-  
+
   protected void notifyChoiceGeneratorRegistered (ChoiceGenerator<?>cg, ThreadInfo ti) {
     try {
       for (int i = 0; i < listeners.length; i++) {
@@ -914,7 +919,7 @@ public abstract class VM {
       throw new JPFListenerException("exception during threadScheduled() notification", t);
     }
   }
-  
+
   protected void notifyLoadClass (ClassFile cf){
     try {
       for (int i = 0; i < listeners.length; i++) {
@@ -926,7 +931,7 @@ public abstract class VM {
       throw x;
     } catch (Throwable t) {
       throw new JPFListenerException("exception during classLoaded() notification", t);
-    }    
+    }
   }
 
   protected void notifyClassLoaded(ClassInfo ci) {
@@ -1040,7 +1045,7 @@ public abstract class VM {
       throw new JPFListenerException("exception during objectShared() notification", t);
     }
   }
-  
+
   protected void notifyObjectNotifies(ThreadInfo ti, ElementInfo ei) {
     try {
       for (int i = 0; i < listeners.length; i++) {
@@ -1253,12 +1258,12 @@ public abstract class VM {
   public ThreadList getThreadList () {
     return getKernelState().getThreadList();
   }
-  
+
   public ClassLoaderList getClassLoaderList() {
     return getKernelState().getClassLoaderList();
   }
 
-  
+
   /**
    * Bundles up the state of the system for export
    */
@@ -1280,7 +1285,7 @@ public abstract class VM {
   public void kernelStateChanged(){
     ss.getKernelState().changed();
   }
-  
+
   public Config getConfig() {
     return config;
   }
@@ -1319,7 +1324,7 @@ public abstract class VM {
     serializer = newSerializer;
     serializer.attach(this);
   }
-  
+
   /**
    * Returns the stateSet if states are being matched.
    */
@@ -1330,11 +1335,11 @@ public abstract class VM {
   public Scheduler getScheduler(){
     return scheduler;
   }
-  
+
   public FunctionObjectFactory getFunctionObjectFacotry() {
     return funcObjFactory;
   }
-  
+
   /**
    * return the last registered SystemState's ChoiceGenerator object
    * NOTE: there might be more than one ChoiceGenerator associated with the
@@ -1347,7 +1352,7 @@ public abstract class VM {
   public ChoiceGenerator<?> getNextChoiceGenerator() {
     return ss.getNextChoiceGenerator();
   }
-  
+
   public boolean hasNextChoiceGenerator(){
     return (ss.getNextChoiceGenerator() != null);
   }
@@ -1355,15 +1360,15 @@ public abstract class VM {
   public boolean setNextChoiceGenerator (ChoiceGenerator<?> cg){
     return ss.setNextChoiceGenerator(cg);
   }
-  
+
   public void setMandatoryNextChoiceGenerator (ChoiceGenerator<?> cg, String failMsg){
     ss.setMandatoryNextChoiceGenerator(cg, failMsg);
   }
-  
+
   /**
    * return the latest registered ChoiceGenerator used in this transition
    * that matches the provided 'id' and is of 'cgType'.
-   * 
+   *
    * This should be the main getter for clients that are cascade aware
    */
   public <T extends ChoiceGenerator<?>> T getCurrentChoiceGenerator (String id, Class<T> cgType) {
@@ -1388,7 +1393,7 @@ public abstract class VM {
   public ChoiceGenerator<?> getLastChoiceGeneratorInThread (ThreadInfo ti){
     return ss.getLastChoiceGeneratorInThread(ti);
   }
-  
+
   public void print (String s) {
     if (treeOutput) {
       System.out.print(s);
@@ -1516,7 +1521,7 @@ public abstract class VM {
       return null;
     }
   }
-  
+
   /**
    * this is here so that we can intercept it in subclassed VMs
    */
@@ -1540,11 +1545,11 @@ public abstract class VM {
     if (cgPrev != null){
       printCG( cgPrev, --n);
     }
-    
+
     System.out.printf("[%d] ", n);
     System.out.println(cg);
-  } 
-  
+  }
+
   // for debugging purposes
   public void printChoiceGeneratorStack(){
     ChoiceGenerator<?> cg = getChoiceGenerator();
@@ -1553,11 +1558,11 @@ public abstract class VM {
       printCG(cg, n);
     }
   }
-  
+
   public ThreadInfo[] getLiveThreads () {
     return getThreadList().getThreads();
   }
-  
+
   /**
    * print call stacks of all live threads
    * this is also used for debugging purposes, so we can't move it to the Reporter system
@@ -1639,13 +1644,13 @@ public abstract class VM {
     boolean success = backtracker.backtrack();
     if (success) {
       if (CHECK_CONSISTENCY) checkConsistency(false);
-      
+
       // restore the path
       path.removeLast();
       lastTrailInfo = path.getLast();
 
       return true;
-      
+
     } else {
       return false;
     }
@@ -1706,7 +1711,7 @@ public abstract class VM {
 
     // actually, it hasn't occurred yet, but will
     transitionOccurred = ss.initializeNextTransition(this);
-    
+
     if (transitionOccurred){
       if (CHECK_CONSISTENCY) {
         checkConsistency(true); // don't push an inconsistent state
@@ -1748,7 +1753,7 @@ public abstract class VM {
           ss.setId(++newStateId); // but we still should have states numbered in case listeners use the id
         }
       }
-      
+
       return true;
 
     } else {
@@ -1874,7 +1879,7 @@ public abstract class VM {
   }
 
   public abstract boolean isDeadlocked ();
-  
+
   public Exception getException () {
     return ss.getUncaughtException();
   }
@@ -1901,7 +1906,7 @@ public abstract class VM {
    * through ThreadInfo, MJIEnv or VM, which all act as facades) wherever possible,
    * and use VM.getVM() where there is no access to such a facade. Once this
    * has been completed, we can start refactoring the users of VM.getVM() to
-   * get access to a suitable facade. 
+   * get access to a suitable facade.
    */
   public static VM getVM () {
     return vm;
@@ -1915,7 +1920,7 @@ public abstract class VM {
   public Search getSearch() {
     return jpf.getSearch();
   }
-  
+
   /**
    * pushClinit all our static fields. Called from <clinit> and reset
    */
@@ -1934,7 +1939,7 @@ public abstract class VM {
   public abstract String getSUTDescription();
 
   public abstract int getNumberOfApplications();
-  
+
   public Heap getHeap() {
     return ss.getHeap();
   }
@@ -1947,18 +1952,18 @@ public abstract class VM {
     return ss.getHeap().getModifiable(objref);
   }
 
-  
+
   public ThreadInfo getCurrentThread () {
     return ThreadInfo.currentThread;
   }
-  
+
   public void registerClassLoader(ClassLoaderInfo cl) {
     this.getKernelState().addClassLoader(cl);
   }
 
   public int registerThread (ThreadInfo ti){
     getKernelState().changed();
-    return getThreadList().add(ti);    
+    return getThreadList().add(ti);
   }
 
   /**
@@ -1987,7 +1992,7 @@ public abstract class VM {
       ss.nextCg.reset();
     }
   }
-  
+
   /**
    * only for debugging, this is expensive
    *
@@ -2000,46 +2005,46 @@ public abstract class VM {
     getThreadList().checkConsistency( isStateStore);
     getHeap().checkConsistency( isStateStore);
   }
-  
+
   public abstract void terminateProcess (ThreadInfo ti);
-  
+
   // this is invoked by the heap (see GenericHeap.newInternString()) upon creating
   // the very first intern string
   public abstract Map<Integer,IntTable<String, String>> getInitialInternStringsMap();
 
   // ---------- Predicates used to query threads from ThreadList ---------- //
-  
+
   public abstract Predicate<ThreadInfo> getRunnablePredicate();
-  
+
   public abstract Predicate<ThreadInfo> getDaemonRunnablePredicate();
-  
+
   public abstract Predicate<ThreadInfo> getAppTimedoutRunnablePredicate();
-  
+
   public Predicate<ThreadInfo> getUserTimedoutRunnablePredicate () {
     return userTimedoutRunnablePredicate;
   }
-  
+
   public Predicate<ThreadInfo> getUserLiveNonDaemonPredicate() {
     return userliveNonDaemonPredicate;
   }
-  
+
   public Predicate<ThreadInfo> getTimedoutRunnablePredicate () {
     return timedoutRunnablePredicate;
   }
-  
+
   public Predicate<ThreadInfo> getAlivePredicate () {
     return alivePredicate;
   }
-  
-  
+
+
   // ---------- Methods for handling finalizers ---------- //
-    
+
   public FinalizerThreadInfo getFinalizerThread() {
     return getCurrentApplicationContext().getFinalizerThread();
   }
-  
+
   abstract void updateFinalizerQueues();
-  
+
   public void processFinalizers() {
     if(processFinalizers) {
       updateFinalizerQueues();

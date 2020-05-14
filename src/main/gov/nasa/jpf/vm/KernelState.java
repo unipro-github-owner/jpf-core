@@ -6,20 +6,21 @@
  * The Java Pathfinder core (jpf-core) platform is licensed under the
  * Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
- * 
- *        http://www.apache.org/licenses/LICENSE-2.0. 
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0.
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and 
+ * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package gov.nasa.jpf.vm;
 
-import gov.nasa.jpf.Config;
 import java.util.Iterator;
 import java.util.Stack;
+
+import gov.nasa.jpf.Config;
 
 
 /**
@@ -55,7 +56,7 @@ public class KernelState implements Restorable<KernelState> {
     }
 
     @Override
-	public KernelState restore (KernelState ks) {
+    public KernelState restore (KernelState ks) {
       // those are all in-situ objects, no need to set them in ks
       threadsMemento.restore(ks.threads);
       cloadersMemento.restore(ks.classLoaders);
@@ -72,7 +73,7 @@ public class KernelState implements Restorable<KernelState> {
     Class<?>[] argTypes = { Config.class, KernelState.class };
     Object[] args = { config, this };
 
-    classLoaders = new ClassLoaderList();  
+    classLoaders = new ClassLoaderList();
     heap = config.getEssentialInstance("vm.heap.class", Heap.class, argTypes, args);
     threads = config.getEssentialInstance("vm.threadlist.class", ThreadList.class, argTypes, args);
   }
@@ -87,7 +88,7 @@ public class KernelState implements Restorable<KernelState> {
   }
 
   /**
-   * Adds the given loader to the list of existing class loaders. 
+   * Adds the given loader to the list of existing class loaders.
    */
   public void addClassLoader(ClassLoaderInfo cl) {
     classLoaders.add(cl);
@@ -120,7 +121,7 @@ public class KernelState implements Restorable<KernelState> {
   public ClassLoaderList getClassLoaderList() {
     return classLoaders;
   }
-  
+
   /**
    * interface for getting notified of changes to KernelState and everything
    * "below" it.
@@ -159,7 +160,7 @@ public class KernelState implements Restorable<KernelState> {
   }
 
   public void gc () {
-        
+
     heap.gc();
 
     // we might have stored stale references in live objects
@@ -167,8 +168,8 @@ public class KernelState implements Restorable<KernelState> {
     cleanUpDanglingStaticReferences();
   }
 
-  
-  
+
+
   private void cleanUpDanglingStaticReferences() {
     for(ClassLoaderInfo cl: classLoaders) {
       Statics sa = cl.getStatics();

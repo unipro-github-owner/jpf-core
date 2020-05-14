@@ -6,13 +6,13 @@
  * The Java Pathfinder core (jpf-core) platform is licensed under the
  * Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
- * 
- *        http://www.apache.org/licenses/LICENSE-2.0. 
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0.
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and 
+ * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package gov.nasa.jpf.vm;
@@ -49,18 +49,18 @@ public class Transition implements Iterable<Step>, Cloneable {
   public Object clone() {
     try {
       Transition t = (Transition)super.clone();
-      
+
       // the deep copy references
       t.cg = cg.clone();
       t.ti = (ThreadInfo)ti.clone();
-      
+
       return t;
-      
+
     } catch (CloneNotSupportedException cnsx){
       return null; // cannot happen
-    } 
+    }
   }
-  
+
   public String getLabel () {
     if (last != null) {
       return last.getLineString();
@@ -183,18 +183,19 @@ public class Transition implements Iterable<Step>, Cloneable {
     private static final long serialVersionUID = 1L;
     CgStorage<?> cg;
     int ti;
-    private Step   first, last; //FIXME TODO investigate
+    long nonSerialFirstId; //FIXME TODO investigate private Step   first, last;
+    long nonSerialLastId; //FIXME TODO investigate
     int nSteps;
-    Object annotation; //FIXME TODO investigate
+    long nonSerialAnnotationId; //FIXME TODO investigate Object annotation;
     String         output;
     int stateId;
 
     public Transition restore() {
       Transition t = new Transition(cg.restore(), VM.getVM().getThreadList().getThreadInfoForId(ti));
-      t.first = first;
-      t.last = last;
+      t.first = (Step)VM.NON_SERIAL_STORAGE.remove(nonSerialFirstId);
+      t.last = (Step)VM.NON_SERIAL_STORAGE.remove(nonSerialLastId);
       t.nSteps = nSteps;
-      t.annotation = annotation;
+      t.annotation = VM.NON_SERIAL_STORAGE.remove(nonSerialAnnotationId);
       t.output = output;
       t.stateId = stateId;
       return t;
@@ -205,10 +206,13 @@ public class Transition implements Iterable<Step>, Cloneable {
     TransitionStorage s = new TransitionStorage();
     s.cg = cg.store();
     s.ti = ti.getId();
-    s.first = first;
-    s.last = last;
+    s.nonSerialFirstId = VM.NON_SERIAL_ID.getAndIncrement();
+    VM.NON_SERIAL_STORAGE.put(s.nonSerialFirstId, first);
+    s.nonSerialLastId = VM.NON_SERIAL_ID.getAndIncrement();
+    VM.NON_SERIAL_STORAGE.put(s.nonSerialLastId, last);
     s.nSteps = nSteps;
-    s.annotation = annotation;
+    s.nonSerialAnnotationId = VM.NON_SERIAL_ID.getAndIncrement();
+    VM.NON_SERIAL_STORAGE.put(s.nonSerialAnnotationId, annotation);
     s.output = output;
     s.stateId = stateId;
     return s;
