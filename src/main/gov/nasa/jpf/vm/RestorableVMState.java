@@ -17,6 +17,7 @@
  */
 package gov.nasa.jpf.vm;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -82,7 +83,8 @@ public class RestorableVMState {
 
   private VmStateData getData() {
     if (data == null) {
-      try (InputStream is = new FileInputStream(storage.resolve("" + file).toFile());
+      File p = storage.resolve("" + file).toFile();
+      try (InputStream is = new FileInputStream(p);
           ObjectInputStream ois = new ObjectInputStream(is);)
       {
         TransitionStorage lastTransition = (TransitionStorage)ois.readObject();
@@ -90,6 +92,8 @@ public class RestorableVMState {
         data = new VmStateData(lastTransition, path);
       } catch (Exception e) {
         throw new RuntimeException(e);
+      } finally {
+        p.delete();
       }
     }
     return (VmStateData)data;
